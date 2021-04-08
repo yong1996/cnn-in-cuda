@@ -17,10 +17,10 @@ void test(){
 }
 
 // cnn -- iteration, lr
-int main(int argc, char** argv) {
-    // loaddata();
-	learn();
-	test();
+// int main(int argc, char** argv) {
+//     // loaddata();
+// 	learn();
+// 	test();
 
-	return 0;
-}
+// 	return 0;
+// }
