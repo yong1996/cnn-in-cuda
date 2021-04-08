@@ -30,7 +30,7 @@ class CNN_layer{
         float *weigth;
     public:
         CNN_layer(int in_width, int in_height, int in_depth);
-        ~CNN_layer();
+        ~CNN_layer(); // free the memory allocation
 
         void setOutput;
         void clear;
