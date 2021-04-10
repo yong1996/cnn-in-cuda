@@ -9,6 +9,16 @@
 
 using namespace std;
 
+static mnist_data *train_set, *test_set;
+static unsigned int train_cnt, test_cnt;
+
+void learn();
+void test();
+void predict();
+double forward(double &data[28][28]);
+double backward();
+
+
 
 static inline void loadData(){
     mnist_load("MNIST_data/train-images.idx3-ubyte", "data/train-labels.idx1-ubyte",
