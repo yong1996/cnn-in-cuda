@@ -24,7 +24,7 @@ class Layer{
     public:
         int width;
         int height;
-        int number;
+        int bytes;
 
         float *bias;
         float *weigth;
@@ -33,7 +33,7 @@ class Layer{
         float *d_preact;
         float *d_weight;
 
-        Layer(int in_width, int in_height, int in_number);
+        Layer(int in_width, int in_height, int bytes);
         ~Layer(); // free the memory allocation
 
         void setOutput; // set data
@@ -41,9 +41,9 @@ class Layer{
         void bp_clear;  
 }
 
-Layer::Layer(int in_width, int in_height, int in_depth): width(in_width), height(in_height), depth(in_depth){
+// Layer::Layer(int in_width, int in_height, int in_depth): width(in_width), height(in_height), size(in_size){
 
-}
+// }
 
 
 
