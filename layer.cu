@@ -3,19 +3,20 @@
 #define MASK_WIDTH = 3;
 
 // Layer constructor:
-Layer::Layer(int in_width, int in_height, int in_size): width(in_width), height(in_height), bytes(in_size){
+Layer::Layer(int in_width, int in_height, int in_size): M(in_width), N(in_height), bytes(in_size){
 
-    float h_bias[in_height];
-    float h_weight[height][width];
+    float h_bias[N];
+    float h_weight[N][M];
+
 
     output = NULL;
     preact = NULL;
     bias = NULL:
     weight = NULL;
 
-    for (int i = 0; i < height; i++){
+    for (int i = 0; i < N; i++){
         h_bias[i] = 0.5f - float(rand()) / float(RAND_MAX);  // initial bias
-        for (int j = 0; j < width; j++){
+        for (int j = 0; j < M; j++){
             h_weight[i][j] = 0.5f - float(rand()) / float(RAND_MAX);  // initial weight
         }
     }
@@ -51,31 +52,36 @@ Layer::~Layer(){
 
 }
 
-void Layer:: output(float *data){
+void Layer:: setInput(float *data){
     cudaMemcpy(output, data, sizeof(float)*bytes, cudaMemcpyHostToDevice);
 }
 
-void Layer:: clear(){
+// void Layer:: clear(){
 
-}
-void Layer:: bp_clear(){
+// }
+// void Layer:: bp_clear(){
 
-}
+// }
 
 
 __device__ float sigmoid(float v){
     return 1/(1 + exp(-v));
 }
 
-__global__ void step_function(float *input, float *output, const int N){
+__global__ void apply_sigmoid(float *input, float *output, const int N){
     int idx = blockIdx.x * blockDim.x + threadIdx.x;
     int size = blockDim.x * gridDim.x;
     // TODO:
 
+    for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
+		output[idx] = sigmoid(input[idx]);
+	}
+
+
 }
 
-// convLayer 1 the weight is 6*3*3  output is 6*27*27
-__global__ void convLayer_forward(int C, int W_grid, int K, float *input[28][28], float output[6][27][27], float weight[6][3][3]){
+// convLayer 1 the weight is 6*3*3  output is 6*24*24
+__global__ void ConvLayerForward_Kernel(int C, int W_grid, int K, float *input[28][28], float output[6][24][24], float weight[6][5][5]){
 
     
     // int m, h, w, c, q, p;
@@ -106,7 +112,7 @@ __global__ void convLayer_forward(int C, int W_grid, int K, float *input[28][28]
     //for (int c = 0;  c < C; c++) {		// sum over all input channels, in this case, the channel is 1
        for (int p = 0; p < K; p++)		// loop over KxK  filter
           for (int q = 0; q < K; q++)  
-             acc += X[h+p][w+q] * W[m][p][q];
+             acc += X[h+p][w+q] * weight[m][p][q];
     //}
     output[m][h][w] = acc;
 
