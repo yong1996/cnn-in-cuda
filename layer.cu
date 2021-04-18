@@ -81,7 +81,7 @@ __global__ void apply_sigmoid(float *input, float *output, const int N){
 }
 
 // convLayer 1 the weight is 6*3*3  output is 6*24*24
-__global__ void ConvLayerForward_Kernel(int C, int W_grid, int K, float *input[28][28], float output[6][24][24], float weight[6][5][5]){
+__global__ void ConvLayerForward_Kernel(int C, int W_grid, int K, float input[28][28], float output[6][24][24], float weight[6][5][5]){
 
     
     // int m, h, w, c, q, p;

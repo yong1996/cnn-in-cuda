@@ -22,8 +22,11 @@ class Layer{
         int N;
         int bytes;
 
+        float *output;
+        float *preact;
+
         float *bias;
-        float *weigth;
+        float *weight;
 
         float *d_output;
         float *d_preact;
@@ -43,7 +46,7 @@ class Layer{
 
 __device__ float sigmoid(float v);
 __global__ void apply_sigmoid(float *input, float *output, const int N);
-__global__ void ConvLayerForward_Kernel(int C, int W_grid, int K, float *input[28][28], float output[6][24][24], float weight[6][5][5]);
+__global__ void ConvLayerForward_Kernel(int C, int W_grid, int K, float input[28][28], float output[6][24][24], float weight[6][5][5]);
 
 
 
