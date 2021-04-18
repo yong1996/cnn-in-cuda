@@ -85,7 +85,7 @@ void forward(const double data[28][28]){
     //apply_sigmoid <<<64,64>>>(l_c1.preact, l_c1.output, l_c1.size);
     printf("%f", l_c1.preact[1]);
 
-    write_ppm("test.ppm",24,24,255,l_c1.preact[0]);
+    write_ppm("test.ppm", 24, 24, 255, l_c1.preact[0]);
 
                                                
 
@@ -103,6 +103,7 @@ void forward(const double data[28][28]){
 
 
 int main(){
+    // loadData()
 
     printf("test 1\n");
     forward(train_set[0].data);
