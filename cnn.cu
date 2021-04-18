@@ -105,7 +105,7 @@ void forward(const double data[28][28]){
     for (int i = 0; i < 6; i++){
         for (int j = 0; j <24; j++){
             for (int z = 0; z < 24; z++){
-                printf("%.2f",(*result + i+j+z));
+                printf("%.2f",*(result + i+j+z));
             }
             printf("\n");
         }
