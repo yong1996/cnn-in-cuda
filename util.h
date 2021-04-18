@@ -9,7 +9,7 @@
 #include "string.h"
 
 
-void write_ppm(char* filename, int xsize, int ysize, int maxval, float* pic)
+void write_ppm(char* filename, int xsize, int ysize, int maxval, float **pic)
 {
 	FILE* fp;
 	//int x, y;
@@ -25,9 +25,11 @@ void write_ppm(char* filename, int xsize, int ysize, int maxval, float* pic)
 	fprintf(fp, "%d %d\n%d\n", xsize, ysize, maxval);
 
 	int numpix = xsize * ysize;
-	for (int i = 0; i < numpix; i++) {
-		unsigned char uc = (unsigned char)((int)pic[i]);
-		fprintf(fp, "%c%c%c", uc, uc, uc);
+	for (int i = 0; i < xsize; i++) {
+        for (int j = 0; j < ysize; j++){
+            unsigned char uc = (unsigned char)pic[i][j];
+		    fprintf(fp, "%c%c%c", uc, uc, uc);
+        }	
 	}
 
 	fclose(fp);

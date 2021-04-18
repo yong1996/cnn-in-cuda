@@ -1,6 +1,5 @@
 #include "layer.h"
 
-#define MASK_WIDTH = 3;
 
 // Layer constructor:
 Layer::Layer(int in_width, int in_height, int in_size): M(in_width), N(in_height), bytes(in_size){
@@ -11,7 +10,7 @@ Layer::Layer(int in_width, int in_height, int in_size): M(in_width), N(in_height
 
     output = NULL;
     preact = NULL;
-    bias = NULL:
+    bias = NULL;
     weight = NULL;
 
     for (int i = 0; i < N; i++){
@@ -64,21 +63,21 @@ void Layer:: setInput(float *data){
 // }
 
 
-__device__ float sigmoid(float v){
-    return 1/(1 + exp(-v));
-}
+// __device__ float sigmoid(float v){
+//     return 1/(1 + exp(-v));
+// }
 
-__global__ void apply_sigmoid(float *input, float *output, const int N){
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
-    int size = blockDim.x * gridDim.x;
-    // TODO:
+// __global__ void apply_sigmoid(float *input, float *output, const int N){
+//     int idx = blockIdx.x * blockDim.x + threadIdx.x;
+//     int size = blockDim.x * gridDim.x;
+//     // TODO:
 
-    for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
-		output[idx] = sigmoid(input[idx]);
-	}
+//     for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
+// 		output[idx] = sigmoid(input[idx]);
+// 	}
 
 
-}
+// }
 
 // convLayer 1 the weight is 6*3*3  output is 6*24*24
 __global__ void ConvLayerForward_Kernel(int C, int W_grid, int K, float input[28][28], float output[6][24][24], float weight[6][5][5]){
@@ -112,7 +111,7 @@ __global__ void ConvLayerForward_Kernel(int C, int W_grid, int K, float input[28
     //for (int c = 0;  c < C; c++) {		// sum over all input channels, in this case, the channel is 1
        for (int p = 0; p < K; p++)		// loop over KxK  filter
           for (int q = 0; q < K; q++)  
-             acc += X[h+p][w+q] * weight[m][p][q];
+             acc += input[h+p][w+q] * weight[m][p][q];
     //}
     output[m][h][w] = acc;
 

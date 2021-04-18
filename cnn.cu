@@ -20,7 +20,8 @@
 
 #include "mnist.h"
 #include "layer.h"
-#include "util.h"
+#include "layer.cu"
+//#include "util.h"
 
 
 //define the kernel size
@@ -57,19 +58,28 @@ static inline void loadData(){
 
 void forward(const double data[28][28]){
 
+    printf("run forward\n");
+
     
     float input[28][28];
 
     for (int i = 0; i<28; i++){
         for (int j = 0; j<28; j++){
             input[i][j] = data[i][j];
+            //printf("%.2f ",data[i][j]);
         }
+        //printf("\n");
     }
+
+    //printf("**************************************\n");
 
 
     //example for convLayer 1:
 
     l_input.setInput((float *)input);
+
+    //printf("input image: %f\n", &l_input.output[0][0]);
+    
 
     int W_grid, H_grid;
     int W_out = 24, H_out = 24;
@@ -82,10 +92,30 @@ void forward(const double data[28][28]){
     dim3 gridDim(M, Y, 1);
     // ConvLayerForward_Kernel<<< gridDim, blockDim>>>(int C = 1, W_grid, int K = 5, (float (*)[28])l_input.output,  (float (*)[24][24])l_c1.preact,(float (*)[5][5])l_c1.weight);
     ConvLayerForward_Kernel<<< gridDim, blockDim>>>(C, W_grid, K, (float (*)[28])l_input.output,  (float (*)[24][24])l_c1.preact,(float (*)[5][5])l_c1.weight);
-    //apply_sigmoid <<<64,64>>>(l_c1.preact, l_c1.output, l_c1.size);
-    printf("%f", l_c1.preact[1]);
 
-    write_ppm("test.ppm", 24, 24, 255, l_c1.preact[0]);
+
+    float *result = (float *)malloc(sizeof(float) * 24*24*6);
+
+    cudaMemcpy(result,
+		l_input.output,
+		24*24*6 * sizeof(float),
+		cudaMemcpyDeviceToHost);
+    //apply_sigmoid <<<64,64>>>(l_c1.preact, l_c1.output, l_c1.size);
+
+    for (int i = 0; i < 6; i++){
+        for (int j = 0; j <24; j++){
+            for (int z = 0; z < 24; z++){
+                printf("%.2f",(*result + i+j+z));
+            }
+            printf("\n");
+        }
+
+        printf("-----------------------------------\n");
+    }
+
+    
+
+    //write_ppm("test.ppm", 24, 24, 255, l_c1.preact[0]);
 
                                                
 
@@ -103,9 +133,9 @@ void forward(const double data[28][28]){
 
 
 int main(){
-    // loadData()
+    loadData();
 
-    printf("test 1\n");
+    printf("test 2\n");
     forward(train_set[0].data);
 
     return 0;

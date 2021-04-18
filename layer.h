@@ -10,10 +10,10 @@
 
 #ifndef LAYER_H
 #define LAYER_H
-#endif
 
 
-const static float dt = 1.0E-01f;
+
+//const static float dt = 1.0E-01f;
 const static float threshold = 1.0E-02f;
 
 class Layer{
@@ -55,5 +55,5 @@ __global__ void ConvLayerForward_Kernel(int C, int W_grid, int K, float input[28
 
 
 
-
+#endif
 
