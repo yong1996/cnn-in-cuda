@@ -23,7 +23,7 @@
 #include "mnist.h"
 #include "layer.h"
 #include "layer.cu"
-#include "maxpooling.h"
+//#include "maxpooling.h"
 //#include "util.h"
 
 
@@ -86,12 +86,12 @@ void forward(const double data[28][28]){
 
     int W_grid, H_grid;
     int W_out = 24, H_out = 24;
-    int M = 6;  // The first (x) dimension in the grid maps to the M output feature maps
+    //int M = 6;  // The first (x) dimension in the grid maps to the M output feature maps
     W_grid = ceilf(W_out/TILE_WIDTH); 	// number of horizontal tiles per output map
     if (W_grid == 0) W_grid = 1;
     H_grid = H_out/TILE_WIDTH; 	// number of vertical tiles per output map
-    int Y = H_grid * W_grid; //The second (y) dimension in the grid maps to the tiles in the output feature maps
-    int C = 1, K = 5;
+    //int Y = H_grid * W_grid; //The second (y) dimension in the grid maps to the tiles in the output feature maps
+    //int C = 1, K = 5;
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
     int bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
     dim3 gridDim(1, 6, bz);
@@ -132,16 +132,6 @@ void forward(const double data[28][28]){
     apply_sigmoid <<<64,64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
 
 
-
-    
-
-    //write_ppm("test.ppm", 24, 24, 255, l_c1.preact[0]);
-
-    //for sigmoid layer:
-    // apply_sigmoid<<<64,64>>> (l_c1.preact, l_c1.output, l_c1.bytes);
-
-    // MaxPool2dForward_Kernel_1<<<>>>((float(*)[24][24])l_c1.output, (float(*)[6][6]l_s1.preact, (float(*)[4][4]l_s1.weight)));
-    // apply_sigmoid<<<64, 64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
 
 
     // //for fully connected layer

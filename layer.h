@@ -53,6 +53,11 @@ __global__ void fp_preact_c1(float input[28][28], float preact[6][24][24], float
 __global__ void ConvLayerForward_Kernel_bias_1(float input[6][24][24], float bias[1]);
 
 
+//average pooling
+__global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6][6][6], int H_in, int W_in, int M, int pool_size);
+__global__ void MaxPool2dBackward_Kernel_1(int stride, int poolSize, float input[6][24][24], float output[6][6][6]);
+
+
 
 
 
