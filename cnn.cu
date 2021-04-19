@@ -25,7 +25,7 @@
 
 
 //define the kernel size
-#define TILE_WIDTH 4  //for small example
+#define TILE_WIDTH 16  //for small example
 
 
 // set Layer
@@ -66,12 +66,12 @@ void forward(const double data[28][28]){
     for (int i = 0; i<28; i++){
         for (int j = 0; j<28; j++){
             input[i][j] = data[i][j];
-            //printf("%.2f ",data[i][j]);
+            printf("%.2f ",data[i][j]);
         }
-        //printf("\n");
+        printf("\n");
     }
 
-    //printf("**************************************\n");
+    printf("**************************************\n");
 
 
     //example for convLayer 1:
@@ -92,12 +92,13 @@ void forward(const double data[28][28]){
     dim3 gridDim(M, Y, 1);
     // ConvLayerForward_Kernel<<< gridDim, blockDim>>>(int C = 1, W_grid, int K = 5, (float (*)[28])l_input.output,  (float (*)[24][24])l_c1.preact,(float (*)[5][5])l_c1.weight);
     ConvLayerForward_Kernel<<< gridDim, blockDim>>>(C, W_grid, K, (float (*)[28])l_input.output,  (float (*)[24][24])l_c1.preact,(float (*)[5][5])l_c1.weight);
+    //fp_preact_c1<<<64, 64>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight);
 
 
     float *result = (float *)malloc(sizeof(float) * 24*24*6);
 
     cudaMemcpy(result,
-		l_input.output,
+		l_c1.preact,
 		24*24*6 * sizeof(float),
 		cudaMemcpyDeviceToHost);
     //apply_sigmoid <<<64,64>>>(l_c1.preact, l_c1.output, l_c1.size);

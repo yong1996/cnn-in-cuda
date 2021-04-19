@@ -117,4 +117,23 @@ __global__ void ConvLayerForward_Kernel(int C, int W_grid, int K, float input[28
 
 }
 
+__global__ void fp_preact_c1(float input[28][28], float preact[6][24][24], float weight[6][5][5])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 5*5*6*24*24;
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 5);
+		const int i2 = ((idx /= 5	) % 5);
+		const int i3 = ((idx /= 5	) % 6);
+		const int i4 = ((idx /= 6	) % 24);
+		const int i5 = ((idx /= 24	) % 24);
+
+		atomicAdd(&preact[i3][i4][i5], weight[i3][i1][i2] * input[i4 + i1][i5 + i2]);
+	}
+}
+
 
