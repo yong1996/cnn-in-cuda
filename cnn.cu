@@ -1,3 +1,6 @@
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
 #define USE_MNIST_LOADER
 #define MNIST_DOUBLE
 
@@ -12,8 +15,6 @@
 #include <math.h>
 
 
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
 
 // //opencv for testing
 // #include <opencv2/core/core.hpp>
@@ -149,7 +150,13 @@ void forward(const double data[28][28]){
 	// FullyConLayerForward_bias<<<64, 64>>>(l_f.preact, l_f.bias);
 	// apply_sigmoid<<<64, 64>>>(l_f.preact, l_f.output, l_f.O);
 
-                                               
+    
+    // FullyConLayerForward_kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight,
+    //      b_pointer, X_height, X_width, W_width, Output_height, Output_width);
+    // convLayer_forward_GPU_naive<<<numBlocks,threadsPerBlock>>>(input_pointer, W_pointer, Output_pointer,
+    //     Inputimage_channel, Inputimage_height, Inputimage_width , Outputimage_width, W_width_height, Outputimage_channel);
+
+
 
 }
 // cnn -- iteration, lr
