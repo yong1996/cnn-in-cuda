@@ -23,7 +23,7 @@
 #include "mnist.h"
 #include "layer.h"
 #include "layer.cu"
-//#include "maxpooling.h"
+#include "maxpooling.h"
 //#include "util.h"
 
 
@@ -88,21 +88,17 @@ void forward(const double data[28][28]){
     int W_out = 24, H_out = 24;
     int M = 6;  // The first (x) dimension in the grid maps to the M output feature maps
     W_grid = ceilf(W_out/TILE_WIDTH); 	// number of horizontal tiles per output map
-    if (W_grid = 0) W_grid = 1;
+    if (W_grid == 0) W_grid = 1;
     H_grid = H_out/TILE_WIDTH; 	// number of vertical tiles per output map
     int Y = H_grid * W_grid; //The second (y) dimension in the grid maps to the tiles in the output feature maps
     int C = 1, K = 5;
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
-    // dim3 gridDim(M, Y, 1);
-    // ConvLayerForward_Kernel<<< gridDim, blockDim>>>(int C = 1, W_grid, int K = 5, (float (*)[28])l_input.output,  (float (*)[24][24])l_c1.preact,(float (*)[5][5])l_c1.weight);
-    // ConvLayerForward_Kernel_1<<< gridDim, blockDim>>>((float (*)[28])l_input.output,  (float (*)[24][24])l_c1.preact,(float (*)[5][5])l_c1.weight);
-
-
     int bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
     dim3 gridDim(1, 6, bz);
 
-    ConvLayerForward_Kernel_1<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, 6, 28, 24, 24, 5, 6);
-    //fp_preact_c1<<<64, 64>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight);
+    ConvLayerForward_Kernel_1<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, 1, 28, 28, 24, 5, 6);
+
+   
 
 
     float *result = (float *)malloc(sizeof(float) * 24*24*6);
@@ -111,7 +107,7 @@ void forward(const double data[28][28]){
 		l_c1.preact,
 		24*24*6 * sizeof(float),
 		cudaMemcpyDeviceToHost);
-    //apply_sigmoid <<<64,64>>>(l_c1.preact, l_c1.output, l_c1.size);
+    
 
     for (int i = 0; i < 6; i++){
         for (int j = 0; j <24; j++){
@@ -123,6 +119,19 @@ void forward(const double data[28][28]){
 
         printf("-----------------------------------\n");
     }
+
+    apply_sigmoid <<<64,64>>>(l_c1.preact, l_c1.output, l_c1.bytes);
+
+
+    // for pooling layer example:
+    bz = ceil((float)6/TILE_WIDTH)*ceil((float)6/TILE_WIDTH);
+    if(bz == 0) bz = 1;
+    dim3 gridDimPool(1, 6, bz);
+    dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
+    MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, 24, 24, 6, 4);
+    apply_sigmoid <<<64,64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
+
+
 
     
 
