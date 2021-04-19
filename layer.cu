@@ -1,6 +1,7 @@
 #include "layer.h"
 
 
+
 // Layer constructor:
 Layer::Layer(int in_width, int in_height, int in_size): M(in_width), N(in_height), bytes(in_size){
 
@@ -68,7 +69,7 @@ __device__ float sigmoid(float v){
 }
 
 __global__ void apply_sigmoid(float *input, float *output, const int N){
-    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int pos = blockIdx.x * blockDim.x + threadIdx.x;
     int size = blockDim.x * gridDim.x;
     // TODO:
     for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
@@ -94,6 +95,10 @@ __global__ void apply_sigmoid(float *input, float *output, const int N){
 //     output[m][h][w] = acc;
 
 // }
+
+#define TILE_WIDTH 16
+
+//input_pointer,  Output_pointer, W_pointer, Inputimage_channel, Inputimage_height, Inputimage_width , Outputimage_width, W_width_height, Outputimage_channel
 __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], int C, int H_in, int W_in, int W_out, int K, int M){
 
     int H_out = H_in - K + 1;
@@ -111,36 +116,20 @@ __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][2
 		for (p = 0; p < K; p++) // loop over KxK filter
 			for (q = 0; q < K; q++)
 				if(h < H_out && w < W_out)
-					acc = acc + input[n*(C*H_in*W_in) + c*(H_in*W_in) + (h+p)*(W_in) + (w+q)] * weight[m*(C*K*K) + c*(K*K) + p*(K) + q];
+					//acc = acc + input[n*(C*H_in*W_in) + c*(H_in*W_in) + (h+p)*(W_in) + (w+q)] * weight[m*(C*K*K) + c*(K*K) + p*(K) + q];
+                    acc += input[h+p][w+q] * weight[m][p][q];
 	}
 	if(h < H_out && w < W_out)
 	{
-		output[n*(M*H_out*W_out) + m*(H_out*W_out) + h*(W_out) + w] = acc;
+		//output[n*(M*H_out*W_out) + m*(H_out*W_out) + h*(W_out) + w] = acc;
+        output[m][h][w] = acc;
     }
 
 
 }
 
-__global__ void fp_preact_c1(float input[28][28], float preact[6][24][24], float weight[6][5][5])
-{
-	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
-	const int size = blockDim.x * gridDim.x;
 
-	const int N = 5*5*6*24*24;
-
-	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
-		int idx = n;
-		const int i1 = ((idx /= 1	) % 5);
-		const int i2 = ((idx /= 5	) % 5);
-		const int i3 = ((idx /= 5	) % 6);
-		const int i4 = ((idx /= 6	) % 24);
-		const int i5 = ((idx /= 24	) % 24);
-
-		atomicAdd(&preact[i3][i4][i5], weight[i3][i1][i2] * input[i4 + i1][i5 + i2]);
-	}
-}
-
-__global__ void ConvLayerForward_Kernel_bias_1(float input[6][24][24], float bias[1]){
+__global__ void ConvLayerForward_Kernel_bias_1(float preact[6][24][24], float bias[1]){
     const int pos = blockIdx.x * blockDim.x + threadIdx.x;
 	const int size = blockDim.x * gridDim.x;
 
