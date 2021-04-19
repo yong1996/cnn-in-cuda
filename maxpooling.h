@@ -23,9 +23,13 @@ class MAXPOOL2D : public Layer{
         void backward();
 };
 
+__global__ void MaxPool2dForward_Kernel_1(int stride, int poolSize, float input[6][24][24], float output[6][6][6]);
+__global__ void MaxPool2dBackward_Kernel_1(int stride, int poolSize, float input[6][24][24], float output[6][6][6]);
 
 
 
+
+#endif
 
 
 

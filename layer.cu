@@ -63,57 +63,61 @@ void Layer:: setInput(float *data){
 // }
 
 
-// __device__ float sigmoid(float v){
-//     return 1/(1 + exp(-v));
-// }
+__device__ float sigmoid(float v){
+    return 1/(1 + exp(-v));
+}
 
-// __global__ void apply_sigmoid(float *input, float *output, const int N){
-//     int idx = blockIdx.x * blockDim.x + threadIdx.x;
-//     int size = blockDim.x * gridDim.x;
-//     // TODO:
-
-//     for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
-// 		output[idx] = sigmoid(input[idx]);
-// 	}
-
-
-// }
+__global__ void apply_sigmoid(float *input, float *output, const int N){
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    int size = blockDim.x * gridDim.x;
+    // TODO:
+    for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
+		output[idx] = sigmoid(input[idx]);
+	}
+}
 
 // convLayer 1 the weight is 6*3*3  output is 6*24*24
-__global__ void ConvLayerForward_Kernel(int C, int W_grid, int K, float input[28][28], float output[6][24][24], float weight[6][5][5]){
+// __global__ void ConvLayerForward_Kernel_1(int C, int W_grid, int K, float input[28][28], float output[6][24][24], float weight[6][5][5]){
 
-    
-    // int m, h, w, c, q, p;
-    // float Pvalue = 0;
-    // int n_start_point = i - (MASK_WIDTH/2);
+//     int m = blockIdx.x;
+//     int h = blockIdx.y / W_grid * 16 + threadIdx.y;
+//     int w = blockIdx.y % W_grid * 16 + threadIdx.x;
+//     float acc = 0.;
+//     //for (int c = 0;  c < C; c++) {		// sum over all input channels, in this case, the channel is 1
+//        for (int p = 0; p < K; p++){
+//             for (int q = 0; q < K; q++){
+//                 acc += input[h+p][w+q] * weight[m][p][q];
+//             }  
+//        }		
+          
+//     //}
+//     output[m][h][w] = acc;
 
-    // for (int m = 0; m < 6; m++){          // for each output feature map
-    //     for (int h = 0; h < 27; h++ ){
-    //         for(int w = 0; w < 27; w++){
-    //             output[m][h][w] = 0;
-    //             for (int c = 0; c < 1; c++){ // for each channel
-    //                 for (int p = 0; p < MASK_WIDTH; p++){
-    //                     for (int q = 0; q < MASK_WIDTH; q++){
-    //                         output[m][h][w] += input[h + p][w + q] * weight[m][p][q];
-    //                     }
-    //                 }
-    //             }
-    //         }
+// }
+__global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], int C, int H_in, int W_in, int W_out, int K, int M){
 
-    //     }
+    int H_out = H_in - K + 1;
+	int n, m, h, w, c, p, q;
+	int W_grid = ceilf((float)W_out/TILE_WIDTH);
+	if(W_grid==0)
+		W_grid = 1;
+	n = blockIdx.x;
+	m = blockIdx.y;
+	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
+	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+	//h and w is not center point, it's upper left corner point of Input image
+	float acc = 0;
+	for (c = 0; c < C; c++) { // sum over all input channels
+		for (p = 0; p < K; p++) // loop over KxK filter
+			for (q = 0; q < K; q++)
+				if(h < H_out && w < W_out)
+					acc = acc + input[n*(C*H_in*W_in) + c*(H_in*W_in) + (h+p)*(W_in) + (w+q)] * weight[m*(C*K*K) + c*(K*K) + p*(K) + q];
+	}
+	if(h < H_out && w < W_out)
+	{
+		output[n*(M*H_out*W_out) + m*(H_out*W_out) + h*(W_out) + w] = acc;
+    }
 
-    // }
-
-    int m = blockIdx.x;
-    int h =  blockIdx.y / W_grid  + threadIdx.y;
-    int w = blockIdx.y % W_grid + threadIdx.x;
-    float acc = 0.;
-    //for (int c = 0;  c < C; c++) {		// sum over all input channels, in this case, the channel is 1
-       for (int p = 0; p < K; p++)		// loop over KxK  filter
-          for (int q = 0; q < K; q++)  
-             acc += input[h+p][w+q] * weight[m][p][q];
-    //}
-    output[m][h][w] = acc;
 
 }
 
@@ -133,6 +137,22 @@ __global__ void fp_preact_c1(float input[28][28], float preact[6][24][24], float
 		const int i5 = ((idx /= 24	) % 24);
 
 		atomicAdd(&preact[i3][i4][i5], weight[i3][i1][i2] * input[i4 + i1][i5 + i2]);
+	}
+}
+
+__global__ void ConvLayerForward_Kernel_bias_1(float input[6][24][24], float bias[1]){
+    const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 6*24*24;
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 6);
+		const int i2 = ((idx /= 6	) % 24);
+		const int i3 = ((idx /= 24	) % 24);
+
+		preact[i1][i2][i3] += bias[i1];
 	}
 }
 

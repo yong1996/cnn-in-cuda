@@ -46,8 +46,11 @@ class Layer{
 
 __device__ float sigmoid(float v);
 __global__ void apply_sigmoid(float *input, float *output, const int N);
-__global__ void ConvLayerForward_Kernel(int C, int W_grid, int K, float input[28][28], float output[6][24][24], float weight[6][5][5]);
+
+//__global__ void ConvLayerForward_Kernel_1(int C, int W_grid, int K, float input[28][28], float output[6][24][24], float weight[6][5][5]);
+__global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], int C, int H_in, int W_in, int W_out, int K, int M);
 __global__ void fp_preact_c1(float input[28][28], float preact[6][24][24], float weight[6][5][5]);
+__global__ void ConvLayerForward_Kernel_bias_1(float input[6][24][24], float bias[1]);
 
 
 
