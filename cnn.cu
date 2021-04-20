@@ -140,37 +140,39 @@ void forward(const double data[28][28]){
 	// FullyConLayerForward_bias<<<64, 64>>>(l_f.preact, l_f.bias);
 	// apply_sigmoid<<<64, 64>>>(l_f.preact, l_f.output, l_f.O);
 
-    
-    dim3 gridDimPool(1, 6, bz);
-    dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
+    dim3 gridDimfc(ceil((float)4/TILE_WIDTH),ceil((float)4/TILE_WIDTH));
+    dim3 blockDimfc(TILE_WIDTH, TILE_WIDTH);
 
-    FullyConLayerForward_kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[5][5])l_c1.weight, (float (*)[24][24])l_c1.preact, (float *)l_c1.bias, 28, 28, 24, 6, 4);
+    // FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>(X_pointer, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, (float *)l_c1.bias, 28, 28, 24, 6, 4);
+    FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[24][24])l_c1.preact, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, (float *)l_c1.bias, 24, 24, 24, 6, 6);
 
+// gemm_with_bias_h<<<numBlocks,threadsPerBlock>>>(X_pointer, W_pointer, Output_pointer, b_pointer, X_height, X_width, W_width, Output_height, Output_width);
 // __global__ void gemm_with_bias_h(float* Md, float* Nd, float* Pd, float* B, int M_height_in, int M_width_N_height_in, int N_width_in , int height_out, int width_out)
 // convLayer_forward_GPU_naive (input_pointer, W_pointer, Output_pointer, Inputimage_channel, Inputimage_height, Inputimage_width , Outputimage_width, W_width_height, Outputimage_channel);
 // ConvLayerForward_Kernel_1 ((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, 1, 28, 28, 24, 5, 6);
 // gemm_with_bias_h (X_pointer, W_pointer, Output_pointer, b_pointer, X_height, X_width, W_width, Output_height, Output_width);
 
 
-    float *result = (float *)malloc(sizeof(float) * 24*24*6);
 
-    cudaMemcpy(result,
-		l_c1.preact,
-		24*24*6 * sizeof(float),
-		cudaMemcpyDeviceToHost);
+    // float *result = (float *)malloc(sizeof(float) * 24*24*6);
+
+    // cudaMemcpy(result,
+	// 	l_c1.preact,
+	// 	24*24*6 * sizeof(float),
+	// 	cudaMemcpyDeviceToHost);
     
 
-    printf("ConvLayerForward_Kernel: \n");
-    for (int i = 0; i < 6; i++){
-        for (int j = 0; j <24; j++){
-            for (int z = 0; z < 24; z++){
-                printf("%.2f",*(result + i+j+z));
-            }
-            printf("\n");
-        }
+    // printf("ConvLayerForward_Kernel: \n");
+    // for (int i = 0; i < 6; i++){
+    //     for (int j = 0; j <24; j++){
+    //         for (int z = 0; z < 24; z++){
+    //             printf("%.2f",*(result + i+j+z));
+    //         }
+    //         printf("\n");
+    //     }
 
-        printf("-----------------------------------\n");
-    }
+    //     printf("-----------------------------------\n");
+    // }
 
 
 }
@@ -189,7 +191,7 @@ void forward(const double data[28][28]){
 int main(){
     loadData();
 
-    printf("test 2\n");
+    printf("test 666\n");
     forward(train_set[0].data);
 
     return 0;
