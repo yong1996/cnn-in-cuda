@@ -179,7 +179,7 @@ __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6
 }
 
 
-__global__ void FullyConLayerForward_kernel(float input1[6][24][24], float input2[6][24][24], float output[6][5][5], float* B, int H1_in, int W1_H2_in, int W2_in , int H_out, int W_out) {
+__global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
     int n, m, h, w, p, q;
 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
 	if(W_grid==0)
@@ -191,13 +191,14 @@ __global__ void FullyConLayerForward_kernel(float input1[6][24][24], float input
 	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
 
 	float Pvalue = 0;
-	for (p = 0; p < H1_in; p++) {
-		for (q = 0; q < W2_in; q++){
-			Pvalue += input1[m][p][q] * input2[m][q][p];
+	for (p = 0; p < W_we; p++) {
+		for (q = 0; q < W_we; q++){
+			if(h < H_out && w < W_out)
+				Pvalue += input[w][p][q] * weight[m][w][p][q];
 		}
 	}
 	__syncthreads();
 
-    if(h < H_out && w < W_out)
-		output[m][h][w] = Pvalue + B[w]; // Output
+    if(m < W_out)
+		output[m] = Pvalue + bias[m]; // Output
 }

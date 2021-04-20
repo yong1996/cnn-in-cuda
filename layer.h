@@ -60,9 +60,7 @@ __global__ void MaxPool2dBackward_Kernel_1(int stride, int poolSize, float input
 
 
 // FullyConnect
-__global__ void FullyConLayerForward_kernel(float input1[6][24][24], float input2[6][24][24], float output[6][5][5], float* B, int H1_in, int W1_H2_in, int W2_in , int H_out, int W_out);
-
-
+__global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out);
 
 
 
