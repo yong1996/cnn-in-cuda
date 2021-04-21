@@ -200,5 +200,5 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 	__syncthreads();
 
     if(w < W_out)
-		output[w] = Pvalue + bias[w]; // Output
+		output[w] += Pvalue + bias[w]; // Output
 }

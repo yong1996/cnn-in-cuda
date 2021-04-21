@@ -70,7 +70,8 @@ void forward(const double data[28][28]){
     for (int i = 0; i<28; i++){
         for (int j = 0; j<28; j++){
             input[i][j] = data[i][j];
-            printf("%.2f ",data[i][j]);
+            // printf("%.2f ",data[i][j]);
+            printf("%d ",ceil(data[i][j]));
         }
         printf("\n");
     }
