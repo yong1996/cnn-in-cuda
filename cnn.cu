@@ -93,8 +93,8 @@ void forward(const double data[28][28]){
     H_grid = H_out/TILE_WIDTH; 	// number of vertical tiles per output map
     //int Y = H_grid * W_grid; //The second (y) dimension in the grid maps to the tiles in the output feature maps
     //int C = 1, K = 5;
-    dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
     int bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
+    dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
     dim3 gridDim(1, 6, bz);
 
     ConvLayerForward_Kernel_1<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, 1, 28, 28, 24, 5, 6);
@@ -142,10 +142,9 @@ void forward(const double data[28][28]){
 
 
     bz = ceil((float)10/TILE_WIDTH);
-    dim3 gridDimfc(1, 10, bz);
+    dim3 gridDimfc(1, 6, bz);
     dim3 blockDimfc(TILE_WIDTH, TILE_WIDTH, 1);
 
-    // FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>(X_pointer, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, (float *)l_c1.bias, 28, 28, 24, 6, 4);
     FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10, 1, 10);
 
 // // gemm_with_bias_h<<<numBlocks,threadsPerBlock>>>(X_pointer, W_pointer, Output_pointer, b_pointer, X_height, X_width, W_width, Output_height, Output_width);
