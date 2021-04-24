@@ -200,5 +200,27 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 	__syncthreads();
 
     if(w < W_out)
-		output[w] += Pvalue + bias[w]; // Output
+		output[w] += Pvalue + bias[w]/W_out; // Output
+}
+
+__global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we) {
+    int n, m, h, w, p, q;
+	int W_out = W_we, H_out = H_in;
+	int W_grid = ceilf((float)W_out/TILE_WIDTH);
+	if(W_grid==0)
+		W_grid = 1;
+
+	n = blockIdx.x;
+	m = blockIdx.y;
+	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
+	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+
+	float Pvalue = 0;
+	for (p = 0; p < W_we; p++) {
+		for (q = 0; q < W_we; q++){
+			if(h < H_out && w < W_out)
+				weight[m][w][p][q] = output[w] * input[w][p][q];
+		}
+		bias[w] += 0.1 * output[w]
+	}
 }

@@ -49,17 +49,6 @@ static inline void loadData(){
 		&test_set, &test_cnt);
 }
 
-
-
-// void learn(){
-   
-// }
-
-// void test(){
-//     return 0;
-// }
-
-
 void forward(const double data[28][28]){
 
     printf("run forward\n");
@@ -95,8 +84,8 @@ void forward(const double data[28][28]){
     //int Y = H_grid * W_grid; //The second (y) dimension in the grid maps to the tiles in the output feature maps
     //int C = 1, K = 5;
     int bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
-    dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
     dim3 gridDim(1, 6, bz);
+    dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
 
     ConvLayerForward_Kernel_1<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, 1, 28, 28, 24, 5, 6);
 
@@ -148,12 +137,6 @@ void forward(const double data[28][28]){
 
     FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10, 1, 10);
 
-// // gemm_with_bias_h<<<numBlocks,threadsPerBlock>>>(X_pointer, W_pointer, Output_pointer, b_pointer, X_height, X_width, W_width, Output_height, Output_width);
-// // __global__ void gemm_with_bias_h(float* Md, float* Nd, float* Pd, float* B, int M_height_in, int M_width_N_height_in, int N_width_in , int height_out, int width_out)
-// // convLayer_forward_GPU_naive (input_pointer, W_pointer, Output_pointer, Inputimage_channel, Inputimage_height, Inputimage_width , Outputimage_width, W_width_height, Outputimage_channel);
-// // ConvLayerForward_Kernel_1 ((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, 1, 28, 28, 24, 5, 6);
-// // gemm_with_bias_h (X_pointer, W_pointer, Output_pointer, b_pointer, X_height, X_width, W_width, Output_height, Output_width);
-
 
 
     float *result = (float *)malloc(sizeof(float) * 10);
@@ -171,7 +154,17 @@ void forward(const double data[28][28]){
 
 }
 
+void backward(){
 
+    bz = ceil((float)10/TILE_WIDTH);
+    dim3 gridDimfc(1, 6, bz);
+    dim3 blockDimfc(TILE_WIDTH, TILE_WIDTH, 1);
+    FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10);
+    
+    // MaxPool2dBackward_kernel<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
+    
+    // ConvLayerBackward_kernel<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
+}
 
 
 int main(){
@@ -179,6 +172,8 @@ int main(){
 
     printf("test 666\n");
     forward(train_set[0].data);
+
+    backward();
 
     return 0;
 }
