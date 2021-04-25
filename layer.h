@@ -59,11 +59,15 @@ __global__ void MaxPool2dBackward_Kernel_1();
 
 // FullyConnect
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out);
+<<<<<<< HEAD
 __global__ void FullyConLayerBackward_kernel();
 
 //Softmax
 __global__ void softmax(float *error, float *output, unsigned int label, unsigned int size);
 
+=======
+__global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out);
+>>>>>>> 6aa684e43b51a8b99efebca4afb5cc89627f9638
 
 
 #endif
