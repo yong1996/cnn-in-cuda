@@ -77,6 +77,13 @@ __global__ void apply_sigmoid(float *input, float *output, const int N){
 	}
 }
 
+// softmax
+__global__ void softmax(float *error, float *output, unsigned int label, unsigned int size){
+	int tid = threadIdx.x;
+	
+}
+
+
 // convLayer 1 the weight is 6*3*3  output is 6*24*24
 // __global__ void ConvLayerForward_Kernel_1(int C, int W_grid, int K, float input[28][28], float output[6][24][24], float weight[6][5][5]){
 
@@ -110,18 +117,15 @@ __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][2
 	m = blockIdx.y;
 	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
 	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
-	//h and w is not center point, it's upper left corner point of Input image
 	float acc = 0;
 	for (c = 0; c < C; c++) { // sum over all input channels
 		for (p = 0; p < K; p++) // loop over KxK filter
 			for (q = 0; q < K; q++)
 				if(h < H_out && w < W_out)
-					//acc = acc + input[n*(C*H_in*W_in) + c*(H_in*W_in) + (h+p)*(W_in) + (w+q)] * weight[m*(C*K*K) + c*(K*K) + p*(K) + q];
                     acc += input[h+p][w+q] * weight[m][p][q];
 	}
 	if(h < H_out && w < W_out)
 	{
-		//output[n*(M*H_out*W_out) + m*(H_out*W_out) + h*(W_out) + w] = acc;
         output[m][h][w] = acc;
     }
 
@@ -202,3 +206,5 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
     if(m < W_out)
 		output[m] = Pvalue + bias[m]; // Output
 }
+
+
