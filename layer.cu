@@ -77,6 +77,13 @@ __global__ void apply_sigmoid(float *input, float *output, const int N){
 	}
 }
 
+// softmax
+__global__ void softmax(float *error, float *output, unsigned int label, unsigned int size){
+	int tid = threadIdx.x;
+	
+}
+
+
 // convLayer 1 the weight is 6*3*3  output is 6*24*24
 // __global__ void ConvLayerForward_Kernel_1(int C, int W_grid, int K, float input[28][28], float output[6][24][24], float weight[6][5][5]){
 
@@ -110,20 +117,19 @@ __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][2
 	m = blockIdx.y;
 	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
 	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
-	//h and w is not center point, it's upper left corner point of Input image
 	float acc = 0;
 	for (c = 0; c < C; c++) { // sum over all input channels
 		for (p = 0; p < K; p++) // loop over KxK filter
 			for (q = 0; q < K; q++)
 				if(h < H_out && w < W_out)
-					//acc = acc + input[n*(C*H_in*W_in) + c*(H_in*W_in) + (h+p)*(W_in) + (w+q)] * weight[m*(C*K*K) + c*(K*K) + p*(K) + q];
                     acc += input[h+p][w+q] * weight[m][p][q];
 	}
 	if(h < H_out && w < W_out)
 	{
-		//output[n*(M*H_out*W_out) + m*(H_out*W_out) + h*(W_out) + w] = acc;
         output[m][h][w] = acc;
     }
+
+
 }
 
 
@@ -201,6 +207,9 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 		output[w] += Pvalue + bias[w]/W_out; // Output
 }
 
+<<<<<<< HEAD
+
+=======
 __global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we) {
     int n, m, h, w, p, q;
 	int W_out = W_we, H_out = H_in;
@@ -213,38 +222,13 @@ __global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[
 	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
 	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
 
+	float Pvalue = 0;
 	for (p = 0; p < W_we; p++) {
 		for (q = 0; q < W_we; q++){
 			if(h < H_out && w < W_out)
 				weight[m][w][p][q] = output[w] * input[w][p][q];
 		}
-		bias[w] += 0.1 * output[w];
+		bias[w] += 0.1 * output[w]
 	}
 }
-
-
-__global__ void ConvLayerBackward_Kernel(float input[28][28], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M) {
-    int H_out = H_in - K + 1;
-	int n, m, h, w, c, p, q;
-	int W_grid = ceilf((float)W_out/TILE_WIDTH);
-	if(W_grid==0)
-		W_grid = 1;
-	n = blockIdx.x;
-	m = blockIdx.y;
-	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
-	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
-
-	float d = 24.0f * 24.0f;
-
-	for (c = 0; c < C; c++) {
-		for (p = 0; p < K; p++) {
-			for (q = 0; q < K; q++) {
-				if(h < H_out && w < W_out) {
-					weight[m][p][q] = output[m][h][w] * input[28][28]/d;
-					bias[m] += 0.1 * output[m][h][w]/d;
-				}
-			}
-		}
-	}
-}
-
+>>>>>>> 6aa684e43b51a8b99efebca4afb5cc89627f9638
