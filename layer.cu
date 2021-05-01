@@ -207,9 +207,6 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 		output[w] += Pvalue + bias[w]/W_out; // Output
 }
 
-<<<<<<< HEAD
-
-=======
 __global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we) {
     int n, m, h, w, p, q;
 	int W_out = W_we, H_out = H_in;
@@ -231,4 +228,3 @@ __global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[
 		bias[w] += 0.1 * output[w]
 	}
 }
->>>>>>> 6aa684e43b51a8b99efebca4afb5cc89627f9638
