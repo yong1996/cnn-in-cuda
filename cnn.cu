@@ -59,8 +59,8 @@ void forward(const double data[28][28]){
     for (int i = 0; i<28; i++){
         for (int j = 0; j<28; j++){
             input[i][j] = data[i][j];
-            // printf("%.2f ",data[i][j]);
-            printf("%d ",ceil(data[i][j]));
+            printf("%.2f ",data[i][j]);
+            // printf("%d ",(int)ceil(data[i][j]));
         }
         printf("\n");
     }
@@ -116,7 +116,6 @@ void forward(const double data[28][28]){
 
     // for pooling layer example:
     bz = ceil((float)6/TILE_WIDTH)*ceil((float)6/TILE_WIDTH);
-    if(bz == 0) bz = 1;
     dim3 gridDimPool(1, 6, bz);
     dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
     MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, 24, 24, 6, 4);
@@ -125,12 +124,7 @@ void forward(const double data[28][28]){
 
 
 
-    // //for fully connected layer
-    // FullyConLayerForward<<<64, 64>>>((float (*)[6][6])l_s1.output, l_f.preact, (float (*)[6][6][6])l_f.weight);
-	// FullyConLayerForward_bias<<<64, 64>>>(l_f.preact, l_f.bias);
-	// apply_sigmoid<<<64, 64>>>(l_f.preact, l_f.output, l_f.O);
-
-
+    // for fully connected layer
     bz = ceil((float)10/TILE_WIDTH);
     dim3 gridDimfc(1, 6, bz);
     dim3 blockDimfc(TILE_WIDTH, TILE_WIDTH, 1);
@@ -138,8 +132,7 @@ void forward(const double data[28][28]){
     FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10, 1, 10);
     // FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>(X_pointer, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, (float *)l_c1.bias, 28, 28, 24, 6, 4);
     apply_sigmoid <<<64,64>>>(l_f.preact, l_f.output, l_f.bytes);
-    makeError(l_f.d_preact, l_f.output,  train_set[0].label, 10)
-
+    // softmax<<<10,1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
 
 
     float *result = (float *)malloc(sizeof(float) * 10);
@@ -158,14 +151,23 @@ void forward(const double data[28][28]){
 }
 
 void backward(){
-
-    bz = ceil((float)10/TILE_WIDTH);
+    int bz = ceil((float)10/TILE_WIDTH);
     dim3 gridDimfc(1, 6, bz);
-    dim3 blockDimfc(TILE_WIDTH, TILE_WIDTH, 1);
+    dim3 blockDimfc(10, 10, 1);
     FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10);
     
+    // bz = ceil((float)6/TILE_WIDTH)*ceil((float)6/TILE_WIDTH);
+    // dim3 gridDimPool(1, 6, bz);
+    // dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
+    // MaxPool2dBackward_Kernel<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, 24, 24, 6, 4);
     // MaxPool2dBackward_kernel<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
     
+    bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
+    dim3 gridDim(1, 6, bz);
+    dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
+    ConvLayerBackward_Kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 24, 24, 6, 5, 6);
+    // ConvLayerwbBackward_Kernel<<<gridDim,blockDim>>>((float (*)[24][24])l_c1.d_output, (float (*)[24][24])l_c1.d_preact, (float (*)[4][4])l_c1.d_weight, l_c1.bias, 1, 28, 28, 24, 5, 6);
+
     // ConvLayerBackward_kernel<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
 }
 
@@ -177,6 +179,8 @@ int main(){
     forward(train_set[0].data);
 
     backward();
+    
+    printf("finish\n");
 
     return 0;
 }

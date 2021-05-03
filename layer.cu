@@ -207,7 +207,6 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 		output[w] += Pvalue + bias[w]/W_out; // Output
 }
 
-
 __global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we) {
     int n, m, h, w, p, q;
 	int W_out = W_we, H_out = H_in;
@@ -226,16 +225,32 @@ __global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[
 			if(h < H_out && w < W_out)
 				weight[m][w][p][q] = output[w] * input[w][p][q];
 		}
-		bias[w] += 0.1 * output[w]
+		bias[w] += 0.1 * output[w];
 	}
 }
 
-__global__ void makeError(float *err, float *output, unsigned int Y, const int N)
-{
-	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
-	const int size = blockDim.x * gridDim.x;
+__global__ void ConvLayerBackward_Kernel(float input[28][28], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M) {
+    int H_out = H_in - K + 1;
+	int n, m, h, w, c, p, q;
+	int W_grid = ceilf((float)W_out/TILE_WIDTH);
+	if(W_grid==0)
+		W_grid = 1;
+	n = blockIdx.x;
+	m = blockIdx.y;
+	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
+	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
 
-	for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
-		err[idx] = ((Y == idx ? 1.0f : 0.0f) - output[idx]);
+	float d = 24.0f * 24.0f;
+
+	for (c = 0; c < C; c++) {
+		for (p = 0; p < K; p++) {
+			for (q = 0; q < K; q++) {
+				if(h < H_out && w < W_out) {
+					weight[m][p][q] = output[m][h][w] * input[28][28]/d;
+					bias[m] += 0.1 * output[m][h][w]/d;
+				}
+			}
+		}
 	}
 }
+
