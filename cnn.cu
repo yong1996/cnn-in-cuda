@@ -177,7 +177,7 @@ int main(){
 
     printf("test 666\n");
     forward(train_set[0].data);
-
+    makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[0].label, 10);
     backward();
     
     printf("finish\n");
