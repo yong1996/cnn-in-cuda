@@ -83,6 +83,16 @@ __global__ void softmax(float *error, float *output, unsigned int label, unsigne
 	
 }
 
+__global__ void makeError(float *err, float *output, unsigned int Y, const int N)
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
+		err[idx] = ((Y == idx ? 1.0f : 0.0f) - output[idx]);
+	}
+}
+
 
 // convLayer 1 the weight is 6*3*3  output is 6*24*24
 // __global__ void ConvLayerForward_Kernel_1(int C, int W_grid, int K, float input[28][28], float output[6][24][24], float weight[6][5][5]){
