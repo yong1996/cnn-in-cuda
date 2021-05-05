@@ -193,6 +193,38 @@ __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6
 }
 
 
+//input_pointer, Inputimage_height, Inputimage_width, output_pointer, Outputimage_channel, pool_size
+__global__ void poolingLayer_backward_GPU(float input[6][24][24], int H_in, int W_in, float output[6][6][6], int M, int pool_size)
+
+{
+	int n, m, h, w, p, q;
+	int H_out = H_in/pool_size;
+	int W_out = W_in/pool_size;
+	int W_grid = ceilf((float)W_out/TILE_WIDTH);
+	if(W_grid==0)
+		W_grid = 1;
+	n = blockIdx.x;
+	m = blockIdx.y;
+	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
+	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+
+	//h and w is not center point of calculating, it's upper left corner point of Input image
+	float acc = 0;
+	for (p = 0; p < pool_size; p++) { // loop over KxK input samples
+		for (q = 0; q < pool_size; q++)
+			if(h < H_out && w < W_out)
+			input[m][h+p][w+q] = output[m][h][w];
+	}
+	__syncthreads();
+
+}
+
+
+
+
+
+
+
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
     int n, m, h, w, p, q;
 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
@@ -238,6 +270,10 @@ __global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[
 		bias[w] += 0.1 * output[w];
 	}
 }
+
+
+
+
 
 __global__ void ConvLayerBackward_Kernel(float input[28][28], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M) {
     int H_out = H_in - K + 1;

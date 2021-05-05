@@ -161,7 +161,18 @@ void backward(){
     // dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
     // MaxPool2dBackward_Kernel<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, 24, 24, 6, 4);
     // MaxPool2dBackward_kernel<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
+
+    //pooling backward:
+    dim3 gridDimPool(TILE_WIDTH,TILE_WIDTH);
+	int bz = ceil((float)24/TILE_WIDTH)*ceil((float)24/TILE_WIDTH);
+	if( bz == 0 )bz = 1;
+	dim3 blockDimPool(1, 6, bz);
+    //input_pointer, Inputimage_height, Inputimage_width, output_pointer, Outputimage_channel, pool_size
+    poolingLayer_backward_GPU<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.d_output, 24, 24, (float (*)[6][6])l_s1.d_preact, 6,  4)
     
+
+
+    //convolutional backward kernel
     bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
     dim3 gridDim(1, 6, bz);
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
