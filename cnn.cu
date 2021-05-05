@@ -59,13 +59,13 @@ void forward(const double data[28][28]){
     for (int i = 0; i<28; i++){
         for (int j = 0; j<28; j++){
             input[i][j] = data[i][j];
-            printf("%.2f ",data[i][j]);
+            // printf("%.2f ",data[i][j]);
             // printf("%d ",(int)ceil(data[i][j]));
         }
-        printf("\n");
+        // printf("\n");
     }
 
-    printf("**************************************\n");
+    // printf("**************************************\n");
 
 
     //example for convLayer 1:
@@ -154,32 +154,23 @@ void backward(){
     int bz = ceil((float)10/TILE_WIDTH);
     dim3 gridDimfc(1, 6, bz);
     dim3 blockDimfc(10, 10, 1);
-    FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10);
+    // FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10);
+    FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.d_weight, l_f.d_preact, l_f.bias, 1, 6, 10);
     
-    // bz = ceil((float)6/TILE_WIDTH)*ceil((float)6/TILE_WIDTH);
-    // dim3 gridDimPool(1, 6, bz);
-    // dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
-    // MaxPool2dBackward_Kernel<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, 24, 24, 6, 4);
-    // MaxPool2dBackward_kernel<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
-
     //pooling backward:
     dim3 gridDimPool(TILE_WIDTH,TILE_WIDTH);
-	int bz = ceil((float)24/TILE_WIDTH)*ceil((float)24/TILE_WIDTH);
+	bz = ceil((float)24/TILE_WIDTH)*ceil((float)24/TILE_WIDTH);
 	if( bz == 0 )bz = 1;
 	dim3 blockDimPool(1, 6, bz);
     //input_pointer, Inputimage_height, Inputimage_width, output_pointer, Outputimage_channel, pool_size
-    poolingLayer_backward_GPU<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.d_output, 24, 24, (float (*)[6][6])l_s1.d_preact, 6,  4)
+    poolingLayer_backward_GPU<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.d_output, 24, 24, (float (*)[6][6])l_s1.d_preact, 6,  4);
     
-
-
     //convolutional backward kernel
     bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
     dim3 gridDim(1, 6, bz);
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
-    ConvLayerBackward_Kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 24, 24, 6, 5, 6);
-    // ConvLayerwbBackward_Kernel<<<gridDim,blockDim>>>((float (*)[24][24])l_c1.d_output, (float (*)[24][24])l_c1.d_preact, (float (*)[4][4])l_c1.d_weight, l_c1.bias, 1, 28, 28, 24, 5, 6);
-
-    // ConvLayerBackward_kernel<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
+    // ConvLayerBackward_Kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 24, 24, 6, 5, 6);
+    ConvLayerBackward_Kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.d_preact, (float (*)[5][5])l_c1.d_weight, l_c1.bias, 1, 24, 24, 6, 5, 6);
 }
 
 
@@ -187,9 +178,13 @@ int main(){
     loadData();
 
     printf("test 666\n");
-    forward(train_set[0].data);
-    makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[0].label, 10);
-    backward();
+    for(int i=0; i<10; i++){
+        printf("label: %d \n", train_set[i].label);
+        
+        forward(train_set[0].data);
+        makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
+        backward();
+    }
     
     printf("finish\n");
 
