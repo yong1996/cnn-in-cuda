@@ -58,6 +58,7 @@ __global__ void ConvLayerBackward_Kernel(float input[28][28], float output[6][24
 //pooling
 __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6][6][6], int H_in, int W_in, int M, int pool_size);
 __global__ void MaxPool2dBackward_Kernel_1();
+__global__ void poolingLayer_backward_GPU(float input[6][24][24], int H_in, int W_in, float output[6][6][6], int M, int pool_size);
 
 // FullyConnect
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out);
