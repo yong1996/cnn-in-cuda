@@ -59,9 +59,14 @@ void Layer:: setInput(float *data){
 // void Layer:: clear(){
 
 // }
-// void Layer:: bp_clear(){
 
-// }
+
+void Layer::bp_clear()
+{
+	cudaMemset(d_output, 0x00, sizeof(float) * bytes);
+	cudaMemset(d_preact, 0x00, sizeof(float) * bytes);
+	cudaMemset(d_weight, 0x00, sizeof(float) * M * N);
+}
 
 
 __device__ float sigmoid(float v){
@@ -90,6 +95,16 @@ __global__ void makeError(float *err, float *output, unsigned int Y, const int N
 
 	for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
 		err[idx] = ((Y == idx ? 1.0f : 0.0f) - output[idx]);
+	}
+}
+
+__global__ void apply_grad(float *output, float *grad, const int N)
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
+		output[idx] += dt * grad[idx];
 	}
 }
 

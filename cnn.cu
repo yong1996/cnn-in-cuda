@@ -171,6 +171,13 @@ void backward(){
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
     // ConvLayerBackward_Kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 24, 24, 6, 5, 6);
     ConvLayerBackward_Kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.d_preact, (float (*)[5][5])l_c1.d_weight, l_c1.bias, 1, 24, 24, 6, 5, 6);
+
+
+    apply_grad<<<64, 64>>>(l_f.weight, l_f.d_weight, l_f.M * l_f.N);
+	apply_grad<<<64, 64>>>(l_s1.weight, l_s1.d_weight, l_s1.M * l_s1.N);
+	apply_grad<<<64, 64>>>(l_c1.weight, l_c1.d_weight, l_c1.M * l_c1.N);
+
+
 }
 
 
@@ -178,10 +185,15 @@ int main(){
     loadData();
 
     printf("test 666\n");
+    //for(int i=0; i< train_cnt; i++){
     for(int i=0; i<10; i++){
         printf("label: %d \n", train_set[i].label);
+
+        l_f.bp_clear();
+		l_s1.bp_clear();
+		l_c1.bp_clear();
         
-        forward(train_set[0].data);
+        forward(train_set[i].data);
         makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
         backward();
     }
