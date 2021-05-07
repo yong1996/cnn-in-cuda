@@ -51,7 +51,7 @@ static inline void loadData(){
 
 void forward(const double data[28][28]){
 
-    printf("run forward\n");
+    // printf("run forward\n");
 
     
     float input[28][28];
@@ -135,16 +135,16 @@ void forward(const double data[28][28]){
     // softmax<<<10,1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
 
 
-    float *result = (float *)malloc(sizeof(float) * 10);
+    // float *result = (float *)malloc(sizeof(float) * 10);
 
-    cudaMemcpy(result, l_f.preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+    // cudaMemcpy(result, l_f.preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
     
 
-    printf("ConvLayerForward_Kernel: \n");
-    for (int i = 0; i < 10; i++){
-        printf("%.2f ",*(result + i));
-    }
-    printf("\n-----------------------------------\n");
+    // printf("ConvLayerForward_Kernel: \n");
+    // for (int i = 0; i < 10; i++){
+    //     printf("%.2f ",*(result + i));
+    // }
+    // printf("\n-----------------------------------\n");
 
 
 
@@ -169,8 +169,18 @@ void backward(){
     bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
     dim3 gridDim(1, 6, bz);
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
+
     // ConvLayerBackward_Kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 24, 24, 6, 5, 6);
-    ConvLayerBackward_Kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.d_preact, (float (*)[5][5])l_c1.d_weight, l_c1.bias, 1, 24, 24, 6, 5, 6);
+    
+    bp_output_c1<<<64, 64>>>((float (*)[24][24])l_c1.d_output, (float (*)[4][4])l_s1.weight, (float (*)[6][6])l_s1.d_preact);
+    ConvLayerBackward_Kernel<<<gridDim,blockDim>>>(
+        (float (*)[28])l_input.output, 
+        (float (*)[24][24])l_c1.d_output, 
+        (float (*)[24][24])l_c1.preact, 
+        (float (*)[24][24])l_c1.d_preact, 
+        (float (*)[5][5])l_c1.d_weight, 
+        l_c1.bias, 
+        1, 24, 24, 6, 5, 6);
 
 
     apply_grad<<<64, 64>>>(l_f.weight, l_f.d_weight, l_f.M * l_f.N);
@@ -185,9 +195,9 @@ int main(){
     loadData();
 
     printf("test 666\n");
-    //for(int i=0; i< train_cnt; i++){
-    for(int i=0; i<10; i++){
-        printf("label: %d \n", train_set[i].label);
+    for(int i=0; i< train_cnt; i++){
+    // // for(int i=0; i<10; i++){
+    //     printf("label: %d \n", train_set[i].label);
 
         l_f.bp_clear();
 		l_s1.bp_clear();
@@ -198,6 +208,19 @@ int main(){
         backward();
     }
     
+    printf("label: %d \n", train_set[train_cnt-1].label);
+    
+    float *result = (float *)malloc(sizeof(float) * 10);
+
+    cudaMemcpy(result, l_f.preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+    
+
+    printf("ConvLayerForward_Kernel: \n");
+    for (int i = 0; i < 10; i++){
+        printf("%.2f ",*(result + i));
+    }
+    printf("\n-----------------------------------\n");
+
     printf("finish\n");
 
     return 0;
