@@ -197,7 +197,7 @@ void backward(){
 
 static void learn(){
 
-    printf("test 6\n");
+    printf("test 666\n");
     for(int i=0; i< 10; i++){
     // // for(int i=0; i<10; i++){
     //     printf("label: %d \n", train_set[i].label);
@@ -208,14 +208,14 @@ static void learn(){
         
         forward(train_set[i].data);
         makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
-        // backward();
+        backward();
 
         
     printf("label: %d \n", train_set[i].label);
     
     float *result = (float *)malloc(sizeof(float) * 10);
 
-    cudaMemcpy(result, l_f.preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+    cudaMemcpy(result, l_f.d_preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
     
 
     printf("ConvLayerForward_Kernel: \n");
@@ -238,7 +238,8 @@ static unsigned int classify(double data[28][28])
 
 	unsigned int max = 0;
 
-	cudaMemcpy(res, l_f.output, sizeof(float) * 10, cudaMemcpyDeviceToHost);
+    cudaMemcpy(res, l_f.output, sizeof(float) * 10, cudaMemcpyDeviceToHost);
+	// cudaMemcpy(res, l_f.d_preact, sizeof(float) * 10, cudaMemcpyDeviceToHost);
 
 	for (int i = 1; i < 10; ++i) {
 		if (res[max] < res[i]) {
