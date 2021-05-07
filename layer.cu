@@ -307,32 +307,12 @@ __global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[
 
 
 
-__global__ void bp_output_c1(float d_output[6][24][24], float weight[1][4][4], float d_preact[6][6][6]) {
-	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
-	const int size = blockDim.x * gridDim.x;
-
-	const int N = 1*4*4*6*6*6;
-
-	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
-		int idx = n;
-		const int i1 = ((idx /= 1	) % 1);
-		const int i2 = ((idx /= 1	) % 4);
-		const int i3 = ((idx /= 4	) % 4);
-		const int i4 = ((idx /= 4	) % 6);
-		const int i5 = ((idx /= 6	) % 6);
-		const int i6 = ((idx /= 6	) % 6);
-
-		atomicAdd(&d_output[i4][i5 * 4 + i2][i6 * 4 + i3], weight[i1][i2][i3] * d_preact[i4][i5][i6]);
-	}
-}
-
 __global__ void ConvLayerBackward_Kernel(
 	float input[28][28], 
 	float d_output[6][24][24], 
 	float preact[6][24][24], 
 	float d_preact[6][24][24], 
 	float d_weight[6][5][5], 
-	float bias[6], 
 	int C, int H_in, int W_in, int W_out, int K, int M) {
 
     int H_out = H_in - K + 1;
@@ -358,7 +338,6 @@ __global__ void ConvLayerBackward_Kernel(
 			for (q = 0; q < K; q++) {
 				if(h < H_out && w < W_out) {
 					d_weight[m][p][q] = d_preact[m][h][w] * input[28][28]/d;
-					bias[m] += 0.1 * d_preact[m][h][w]/d;
 				}
 			}
 		}

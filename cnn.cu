@@ -172,14 +172,12 @@ void backward(){
 
     // ConvLayerBackward_Kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 24, 24, 6, 5, 6);
     
-    bp_output_c1<<<64, 64>>>((float (*)[24][24])l_c1.d_output, (float (*)[4][4])l_s1.weight, (float (*)[6][6])l_s1.d_preact);
     ConvLayerBackward_Kernel<<<gridDim,blockDim>>>(
         (float (*)[28])l_input.output, 
         (float (*)[24][24])l_c1.d_output, 
         (float (*)[24][24])l_c1.preact, 
         (float (*)[24][24])l_c1.d_preact, 
         (float (*)[5][5])l_c1.d_weight, 
-        l_c1.bias, 
         1, 24, 24, 6, 5, 6);
 
 
