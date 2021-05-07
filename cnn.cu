@@ -191,6 +191,40 @@ void backward(){
 }
 
 
+static unsigned int classify(double data[28][28])
+{
+	float res[10];
+
+	forward(data);
+
+	unsigned int max = 0;
+
+	cudaMemcpy(res, l_f.output, sizeof(float) * 10, cudaMemcpyDeviceToHost);
+
+	for (int i = 1; i < 10; ++i) {
+		if (res[max] < res[i]) {
+			max = i;
+		}
+	}
+
+	return max;
+}
+
+// Perform forward propagation of test data
+static void test()
+{
+	int error = 0;
+
+	for (int i = 0; i < test_cnt; ++i) {
+		if (classify(test_set[i].data) != test_set[i].label) {
+			++error;
+		}
+	}
+
+	printf(stdout, "Error Rate: %.2lf%%\n", double(error) / double(test_cnt) * 100.0);
+}
+
+
 int main(){
     loadData();
 
@@ -221,6 +255,9 @@ int main(){
     }
     printf("\n-----------------------------------\n");
 
+
+
+    test();
     printf("finish\n");
 
     return 0;
