@@ -82,6 +82,18 @@ __global__ void apply_sigmoid(float *input, float *output, const int N){
 	}
 }
 
+__global__ void backward_sigmoid(float* X, int size_in)
+{
+	int t = blockIdx.x * 1024 + threadIdx.x;
+
+	if(t < size_in)
+	{
+		double tmp = 1 / (1 + exp(-X[t]));
+		tmp = (1-tmp)*tmp;
+		X[t] = X[t]*tmp;
+	}
+}
+
 // softmax
 __global__ void softmax(float *error, float *output, unsigned int label, unsigned int size){
 	int tid = threadIdx.x;

@@ -46,6 +46,7 @@ class Layer{
 
 __device__ float sigmoid(float v);
 __global__ void apply_sigmoid(float *input, float *output, const int N);
+__global__ void backward_sigmoid(float* X, int size_in);
 __global__ void apply_grad(float *output, float *grad, const int N);
 __global__ void makeError(float *err, float *output, unsigned int Y, const int N);
 
