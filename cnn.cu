@@ -190,6 +190,38 @@ void backward(){
 
 }
 
+static void learn(){
+
+    printf("test 666\n");
+    for(int i=0; i< train_cnt; i++){
+    // // for(int i=0; i<10; i++){
+    //     printf("label: %d \n", train_set[i].label);
+
+        l_f.bp_clear();
+		l_s1.bp_clear();
+		l_c1.bp_clear();
+        
+        forward(train_set[i].data);
+        makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
+        backward();
+    }
+    
+    printf("label: %d \n", train_set[train_cnt-1].label);
+    
+    float *result = (float *)malloc(sizeof(float) * 10);
+
+    cudaMemcpy(result, l_f.preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+    
+
+    printf("ConvLayerForward_Kernel: \n");
+    for (int i = 0; i < 10; i++){
+        printf("%.2f ",*(result + i));
+    }
+    printf("\n-----------------------------------\n");
+
+
+}
+
 
 static unsigned int classify(double data[28][28])
 {
@@ -221,42 +253,17 @@ static void test()
 		}
 	}
 
-	printf(stdout, "Error Rate: %.2lf%%\n", double(error) / double(test_cnt) * 100.0);
+	printf("Error Rate: %.2lf%%\n", double(error) / double(test_cnt) * 100.0);
 }
 
 
 int main(){
+
     loadData();
-
-    printf("test 666\n");
-    for(int i=0; i< train_cnt; i++){
-    // // for(int i=0; i<10; i++){
-    //     printf("label: %d \n", train_set[i].label);
-
-        l_f.bp_clear();
-		l_s1.bp_clear();
-		l_c1.bp_clear();
-        
-        forward(train_set[i].data);
-        makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
-        backward();
+    for (int i = 0; i<1; i++){
+        learn();
     }
     
-    printf("label: %d \n", train_set[train_cnt-1].label);
-    
-    float *result = (float *)malloc(sizeof(float) * 10);
-
-    cudaMemcpy(result, l_f.preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
-    
-
-    printf("ConvLayerForward_Kernel: \n");
-    for (int i = 0; i < 10; i++){
-        printf("%.2f ",*(result + i));
-    }
-    printf("\n-----------------------------------\n");
-
-
-
     test();
     printf("finish\n");
 
