@@ -277,10 +277,10 @@ __global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[
 	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
 
 	
-	float o = sigmoid(preact[m][h][w]);
+	// float o = sigmoid(preact[m][h][w]);
 	
-	float dv = d_output[m][h][w] * o * (1 - o);
-	__syncthreads();
+	// float dv = d_output[m][h][w] * o * (1 - o);
+	// __syncthreads();
 	
 
 	float Pvalue = 0;
