@@ -155,7 +155,14 @@ void backward(){
     dim3 gridDimfc(1, 6, bz);
     dim3 blockDimfc(10, 10, 1);
     // FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10);
-    FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.d_weight, l_f.d_preact, l_f.bias, 1, 6, 10);
+    FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>(
+        (float (*)[6][6])l_s1.output, 
+        (float (*)[6][6][6])l_f.d_weight, 
+        l_f.d_output, 
+        l_f.preact, 
+        l_f.d_preact, 
+        l_f.bias, 
+        1, 6, 10);
     
     //pooling backward:
     dim3 gridDimPool(TILE_WIDTH,TILE_WIDTH);
@@ -201,19 +208,14 @@ static void learn(){
         
         forward(train_set[i].data);
         makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
-        //backward();
+        backward();
 
-        // printf("label: %d \n", train_set[train_cnt-1].label);
-
-
+        
     printf("label: %d \n", train_set[i].label);
-
     
     float *result = (float *)malloc(sizeof(float) * 10);
 
-    // cudaMemcpy(result, l_f.preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
     cudaMemcpy(result, l_f.d_preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
-
     
 
     printf("ConvLayerForward_Kernel: \n");
@@ -221,8 +223,9 @@ static void learn(){
         printf("%.2f ",*(result + i));
     }
     printf("\n-----------------------------------\n");
-    }
 
+    }
+    
 }
 
 
@@ -234,7 +237,8 @@ static unsigned int classify(double data[28][28])
 
 	unsigned int max = 0;
 
-	cudaMemcpy(res, l_f.output, sizeof(float) * 10, cudaMemcpyDeviceToHost);
+    cudaMemcpy(res, l_f.output, sizeof(float) * 10, cudaMemcpyDeviceToHost);
+	// cudaMemcpy(res, l_f.d_preact, sizeof(float) * 10, cudaMemcpyDeviceToHost);
 
 	for (int i = 1; i < 10; ++i) {
 		if (res[max] < res[i]) {

@@ -69,7 +69,15 @@ __global__ void poolingLayer_backward_GPU(float input[6][24][24], int H_in, int 
 
 // FullyConnect
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out);
-__global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we);
+// __global__ void FullyConLayerBackward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we);
+__global__ void FullyConLayerBackward_kernel(
+	float output[6][6][6], 
+	float weight[10][6][6][6], 
+	float d_output[10], 
+	float preact[10], 
+	float d_preact[10], 
+	float bias[10], 
+	int H_in, int W_in, int W_we);
 
 //Softmax
 __global__ void softmax(float *error, float *output, unsigned int label, unsigned int size);
