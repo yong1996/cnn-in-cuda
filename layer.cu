@@ -1,6 +1,8 @@
 #include "layer.h"
 
 
+#define TILE_WIDTH 16
+
 
 // Layer constructor:
 Layer::Layer(int in_width, int in_height, int in_size): M(in_width), N(in_height), bytes(in_size){
@@ -56,9 +58,12 @@ void Layer:: setInput(float *data){
     cudaMemcpy(output, data, sizeof(float)*bytes, cudaMemcpyHostToDevice);
 }
 
-// void Layer:: clear(){
-
-// }
+// Reset GPU memory between iterations
+void Layer::clear()
+{
+	cudaMemset(output, 0x00, sizeof(float) * bytes);
+	cudaMemset(preact, 0x00, sizeof(float) * bytes);
+}
 
 
 void Layer::bp_clear()
@@ -219,39 +224,56 @@ __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6
 	}
 }
 
+//gemm_with_bias_h<<<numBlocks,threadsPerBlock>>>(X_pointer, W_pointer, Output_pointer, b_pointer, X_height, X_width, W_width, Output_height, Output_width);
+// __global__ void gemm_h_bias(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out){
 
-//input_pointer, Inputimage_height, Inputimage_width, output_pointer, Outputimage_channel, pool_size
-__global__ void poolingLayer_backward_GPU(float input[6][24][24], int H_in, int W_in, float output[6][6][6], int M, int pool_size)
+// 	int M_height_in = 1;
+// 	int M_width_N_height_in = 6*6*6;
+// 	int N_width_in = 10;
+// 	int height_out = 1;
+// 	int width_out = 10;
 
-{
-	int n, m, h, w, p, q;
-	int H_out = H_in/pool_size;
-	int W_out = W_in/pool_size;
-	int W_grid = ceilf((float)W_out/TILE_WIDTH);
-	if(W_grid==0)
-		W_grid = 1;
-	n = blockIdx.x;
-	m = blockIdx.y;
-	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
-	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+// 	__shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
+// 	__shared__ float Nds[TILE_WIDTH][TILE_WIDTH];
 
-	//h and w is not center point of calculating, it's upper left corner point of Input image
-	float acc = 0;
-	for (p = 0; p < pool_size; p++) { // loop over KxK input samples
-		for (q = 0; q < pool_size; q++)
-			if(h < H_out && w < W_out)
-			input[m][h+p][w+q] = output[m][h][w];
-	}
-	__syncthreads();
+// 	int bx = blockIdx.x;
+// 	int by = blockIdx.y;
+// 	int tx = threadIdx.x;
+// 	int ty = threadIdx.y;
 
-}
+// 	int row = by * TILE_WIDTH + ty;
+// 	int col = bx * TILE_WIDTH + tx;
+
+// 	float Pvalue = 0;
+
+// 	//width
+// 	for(int m = 0 ; m < ceilf((float)M_width_N_height_in / TILE_WIDTH) ; ++m)
+// 	{
+// 		if(row < M_height_in && (m*TILE_WIDTH + tx) < M_width_N_height_in) // X
+// 			Mds[ty][tx] = input[row*M_width_N_height_in+(m*TILE_WIDTH + tx)];
+// 		else
+// 			Mds[ty][tx] = 0;
+// 		if((m*TILE_WIDTH + ty) < M_width_N_height_in && col < N_width_in) // W
+// 			Nds[ty][tx] = weight[(m*TILE_WIDTH + ty)*N_width_in + col];
+// 		else
+// 			Nds[ty][tx] = 0;
+// 		__syncthreads();
+
+// 		for(int k = 0 ; k < TILE_WIDTH ; ++k)
+// 		{
+// 			Pvalue += Mds[ty][k] * Nds[k][tx];
+// 		}
+
+// 		__syncthreads();
+// 	}
+
+// 	if(row < height_out && col < width_out)
+// 		output[row*width_out + col] = Pvalue + bias[col]; // Output
+// }
 
 
-
-
-
-
-
+//input_height, input_width, weight_width, output_height, output_width
+//      1             6          10          1              10
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
     int n, m, h, w, p, q;
 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
@@ -275,6 +297,39 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
     if(w < W_out)
 		output[w] += Pvalue + bias[w]/W_out; // Output
 }
+
+
+__global__ void fp_preact_f(float input[6][6][6], float preact[10], float weight[10][6][6][6])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 10*6*6*6;
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 10);
+		const int i2 = ((idx /= 10	) % 6);
+		const int i3 = ((idx /= 6	) % 6);
+		const int i4 = ((idx /= 6	) % 6);
+
+		atomicAdd(&preact[i1], weight[i1][i2][i3][i4] * input[i2][i3][i4]);
+	}
+}
+
+__global__ void fp_bias_f(float preact[10], float bias[10])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 10;
+
+	for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
+		preact[idx] += bias[idx];
+	}
+}
+
+
 
 __global__ void FullyConLayerBackward_kernel(
 	float output[6][6][6], 
@@ -315,6 +370,33 @@ __global__ void FullyConLayerBackward_kernel(
 }
 
 
+//input_pointer, Inputimage_height, Inputimage_width, output_pointer, Outputimage_channel, pool_size
+__global__ void poolingLayer_backward_GPU(float input[6][24][24], int H_in, int W_in, float output[6][6][6], int M, int pool_size)
+
+{
+	int n, m, h, w, p, q;
+	int H_out = H_in/pool_size;
+	int W_out = W_in/pool_size;
+	int W_grid = ceilf((float)W_out/TILE_WIDTH);
+	if(W_grid==0)
+		W_grid = 1;
+	n = blockIdx.x;
+	m = blockIdx.y;
+	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
+	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+
+	//h and w is not center point of calculating, it's upper left corner point of Input image
+	float acc = 0;
+	for (p = 0; p < pool_size; p++) { // loop over KxK input samples
+		for (q = 0; q < pool_size; q++)
+			if(h < H_out && w < W_out)
+			input[m][h+p][w+q] = output[m][h][w];
+	}
+	__syncthreads();
+
+}
+
+
 
 __global__ void ConvLayerBackward_Kernel(
 	float input[28][28], 
@@ -352,4 +434,79 @@ __global__ void ConvLayerBackward_Kernel(
 		}
 	}
 }
+
+
+
+__global__ void fp_preact_c1(float input[28][28], float preact[6][24][24], float weight[6][5][5])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 5*5*6*24*24;
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 5);
+		const int i2 = ((idx /= 5	) % 5);
+		const int i3 = ((idx /= 5	) % 6);
+		const int i4 = ((idx /= 6	) % 24);
+		const int i5 = ((idx /= 24	) % 24);
+
+		atomicAdd(&preact[i3][i4][i5], weight[i3][i1][i2] * input[i4 + i1][i5 + i2]);
+	}
+}
+
+__global__ void fp_bias_c1(float preact[6][24][24], float bias[6])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 6*24*24;
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 6);
+		const int i2 = ((idx /= 6	) % 24);
+		const int i3 = ((idx /= 24	) % 24);
+
+		preact[i1][i2][i3] += bias[i1];
+	}
+}
+
+__global__ void fp_preact_s1(float input[6][24][24], float preact[6][6][6], float weight[1][4][4])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 4*4*6*6*6;
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 4);
+		const int i2 = ((idx /= 4	) % 4);
+		const int i3 = ((idx /= 4	) % 6);
+		const int i4 = ((idx /= 6	) % 6);
+		const int i5 = ((idx /= 6	) % 6);
+
+		atomicAdd(&preact[i3][i4][i5], weight[0][i1][i2] * input[i3][i4 * 4 + i1][i5 * 4 + i2]);
+	}
+}
+
+__global__ void fp_bias_s1(float preact[6][6][6], float bias[1])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 6*6*6;
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 6);
+		const int i2 = ((idx /= 6	) % 6);
+		const int i3 = ((idx /= 6	) % 6);
+
+		preact[i1][i2][i3] += bias[0];
+	}
+}
+
 
