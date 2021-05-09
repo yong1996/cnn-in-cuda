@@ -125,7 +125,7 @@ void forward(const double data[28][28]){
     dim3 gridDimPool(1, 6, bz);
     dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
     MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, 24, 24, 6, 4);
-    apply_sigmoid <<<64,64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
+    // apply_sigmoid <<<64,64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
 
     // float *result = (float *)malloc(sizeof(float) * 24*24*6);
 
@@ -246,14 +246,22 @@ void backward(){
     dim3 gridDimfc(1, 10, 1);
     dim3 blockDimfc(6, 6, 6);
     // FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10);
+    // FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>(
+    //     (float (*)[6][6])l_s1.output, 
+    //     (float (*)[6][6][6])l_f.d_weight, 
+    //     l_f.output, 
+    //     l_f.preact, 
+    //     l_f.d_preact, 
+    //     l_f.bias, 
+    //     1, 6, 10);
+
     FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>(
-        (float (*)[6][6])l_s1.output, 
-        (float (*)[6][6][6])l_f.d_weight, 
-        l_f.d_output, 
-        l_f.preact, 
-        l_f.d_preact, 
-        l_f.bias, 
-        1, 6, 10);
+            l_f.output,
+            l_f.d_preact,
+            (float (*)[6][6]) l_s1.preact,
+            (float (*)[6][6][6]) l_f.d_weight,
+            l_f.bias
+        );
     
     //pooling backward:
     dim3 gridDimPool(TILE_WIDTH,TILE_WIDTH);
@@ -261,7 +269,7 @@ void backward(){
 	if( bz == 0 )bz = 1;
 	dim3 blockDimPool(1, 6, bz);
     //input_pointer, Inputimage_height, Inputimage_width, output_pointer, Outputimage_channel, pool_size
-    poolingLayer_backward_GPU<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.d_output, 24, 24, (float (*)[6][6])l_s1.d_preact, 6,  4);
+    poolingLayer_backward_GPU<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.d_output, 24, 24, (float (*)[6][6])l_s1.preact, 6,  4);
     
     //convolutional backward kernel
     bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
@@ -299,7 +307,7 @@ static void learn(){
         
         forward(train_set[i].data);
         makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
-        //backward();
+        backward();
 
         
     printf("label: %d \n", train_set[i].label);

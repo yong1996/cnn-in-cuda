@@ -224,124 +224,8 @@ __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6
 	}
 }
 
-//gemm_with_bias_h<<<numBlocks,threadsPerBlock>>>(X_pointer, W_pointer, Output_pointer, b_pointer, X_height, X_width, W_width, Output_height, Output_width);
-// __global__ void gemm_h_bias(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out){
-
-// 	int M_height_in = 1;
-// 	int M_width_N_height_in = 6*6*6;
-// 	int N_width_in = 10;
-// 	int height_out = 1;
-// 	int width_out = 10;
-
-// 	__shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
-// 	__shared__ float Nds[TILE_WIDTH][TILE_WIDTH];
-
-// 	int bx = blockIdx.x;
-// 	int by = blockIdx.y;
-// 	int tx = threadIdx.x;
-// 	int ty = threadIdx.y;
-
-// 	int row = by * TILE_WIDTH + ty;
-// 	int col = bx * TILE_WIDTH + tx;
-
-// 	float Pvalue = 0;
-
-// 	//width
-// 	for(int m = 0 ; m < ceilf((float)M_width_N_height_in / TILE_WIDTH) ; ++m)
-// 	{
-// 		if(row < M_height_in && (m*TILE_WIDTH + tx) < M_width_N_height_in) // X
-// 			Mds[ty][tx] = input[row*M_width_N_height_in+(m*TILE_WIDTH + tx)];
-// 		else
-// 			Mds[ty][tx] = 0;
-// 		if((m*TILE_WIDTH + ty) < M_width_N_height_in && col < N_width_in) // W
-// 			Nds[ty][tx] = weight[(m*TILE_WIDTH + ty)*N_width_in + col];
-// 		else
-// 			Nds[ty][tx] = 0;
-// 		__syncthreads();
-
-// 		for(int k = 0 ; k < TILE_WIDTH ; ++k)
-// 		{
-// 			Pvalue += Mds[ty][k] * Nds[k][tx];
-// 		}
-
-// 		__syncthreads();
-// 	}
-
-// 	if(row < height_out && col < width_out)
-// 		output[row*width_out + col] = Pvalue + bias[col]; // Output
-// }
 
 
-
-// for(j<6){
-// for(k<6){
-// for(l<6){
-// 	for(i<10){
-// 		output[i] += input[j][k][l] * weight[i][j][k][l]
-// 	}
-// }
-// }
-// }
-
-
-
-// 2x1     1x2
-// for(i<2){
-// 	for(j<1){
-// 		for(k<2){
-// 			// c[1][k] += a[i][j] * b[k][j]
-// 			for(l<6){
-//				c[i][k][l] += a[i][j][k] * b[k][j][l]
-//				c[i] += a[i][a][b][c] * b[c][b][a]
-// 			}
-// 		}
-// 	}
-// }
-
-
-// [p][q]         [q][1]         [q]
-// p q           q
-// hxw           hxw          hxw
-// 4x6           6x1     =    4x1
-
-// 1 2 3 4 5 6   1 
-// 2 3 4 5 6 7   2
-// 3 4 5 6 7 8   3
-// 4 5 6 7 8 9   4
-//               5
-// 			  6
-
-
-// __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
-//     __shared__ float Ns[10];
-
-// 	int l, m, n, o, p, q;
-
-// 	int i, a, b, c;
-// 	l = blockIdx.x; // 1
-// 	i = blockIdx.y; // 10
-// 	n = blockIdx.z; // 1
-// 	a = threadIdx.x; // 6
-// 	b = threadIdx.y; // 6
-// 	c = threadIdx.z; // 6
-
-// 	// printf("")
-// 	Ns[i] = 0;
-// 	__syncthreads();
-
-// 	// Ns[o] += input[m][p][q] * weight[o][m][p][q];
-// 	Ns[i] += weight[i][a][b][c] * input[a][b][c];
-// 	// atomicAdd(&Ns[i], weight[i][a][b][c] * input[c][b][a]);
-// 	// atomicAdd(&Ns[o], weight[o][m][p][q] * input[m][p][q]);
-// 	__syncthreads();
-
-// 	// if(i < 10)
-// 		Ns[i] += bias[i];
-// 	__syncthreads();
-
-//     if(i < 10 && a < 1 && b < 1 && c < 1)
-// 		output[i] = Ns[i]; // Output
-// }
 
 // input_height, input_width, weight_width, output_height, output_width
 //      1             6          10          1              10
@@ -406,43 +290,34 @@ __global__ void fp_bias_f(float preact[10], float bias[10])
 }
 
 
-
 __global__ void FullyConLayerBackward_kernel(
-	float output[6][6][6], 
-	float weight[10][6][6][6], 
-	float d_output[10], 
-	float preact[10], 
-	float d_preact[10], 
-	float bias[10], 
-	int H_in, int W_in, int W_we) {
-		
-    int n, m, h, w, p, q;
-	int W_out = W_we, H_out = H_in;
-	int W_grid = ceilf((float)W_out/TILE_WIDTH);
-	if(W_grid==0)
-		W_grid = 1;
+	float lf_output[10],
+	float l_f_d_preact[10],
+	float ls1_preact[6][6][6],
+	float lf_weight[10][6][6][6],
+	float lf_d_weight[10][6][6][6],
+	float lf_bias[10]
+	) {
+
+	int n, m, h, w, y, p, q, o;
 
 	n = blockIdx.x;
-	m = blockIdx.y;
-	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
-	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+	m = blockIdx.y;  // 10
+	h = threadIdx.x;  // 6
+	w = threadIdx.y;  // 6
+	y = threadIdx.z;  // 6
 
-
-	float o = sigmoid(preact[w]);
+	l_f_d_preact[m] *= lf_output[m] * (1- lf_output[m]);
 	
-	// float dv = d_output[w] * o * (1 - o);
-	d_preact[w] = d_output[w] * o * (1 - o);
+	// ls1_d_preact[m] = l_f_d_preact[m] * lf_output[m] * (1- lf_output[m]);
+
+	lf_bias[m] += dt + l_f_d_preact[m];
 	__syncthreads();
-	
 
-	float Pvalue = 0;
-	for (p = 0; p < W_we; p++) {
-		for (q = 0; q < W_we; q++){
-			if(h < H_out && w < W_out)
-				weight[m][w][p][q] = d_preact[w] * output[w][p][q];
-		}
-		bias[w] += 0.1 * d_preact[w];
-	}
+
+	lf_d_weight[m][h][w][y] = l_f_d_preact[m] * ls1_preact[h][w][y] ;
+	lf_d_weight[m][h][w][y] += lf_weight[m][h][w][y];
+	__syncthreads();
 }
 
 
@@ -466,7 +341,7 @@ __global__ void poolingLayer_backward_GPU(float input[6][24][24], int H_in, int 
 	for (p = 0; p < pool_size; p++) { // loop over KxK input samples
 		for (q = 0; q < pool_size; q++)
 			if(h < H_out && w < W_out)
-			input[m][h+p][w+q] = output[m][h][w];
+			input[m][h+p][w+q] = output[m][h][w] / (pool_size * pool_size);
 	}
 	__syncthreads();
 
