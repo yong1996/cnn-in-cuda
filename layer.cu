@@ -213,14 +213,14 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 				if(h < 6 && w < 6 && y < 6)
 				// Pvalue += input[y][h+p][w+q] * weight[m][y][h+p][w+q];
 				// Pvalue += input[h][w][y] * weight[m][h+o][w+p][y+q];
-				Pvalue += input[h][w][y] * weight[m][o][p][q];
+				Pvalue += input[o][p][q] * weight[m][o][p][q];
 			}
 		}
 	}
 	__syncthreads();
 
     if(m < W_out)
-		output[m] += Pvalue + bias[m]; // Output
+		output[m] = Pvalue + bias[m]; // Output
 }
 
 
