@@ -125,7 +125,7 @@ void forward(const double data[28][28]){
     dim3 gridDimPool(1, 6, bz);
     dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
     //MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, 24, 24, 6, 4);
-    MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>(float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, (float (*)[5][5])l_c1.weight, l_s1.bias ,24, 24, 6, 4);
+    MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>(float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, (float (*)[4][4])l_s1.weight, l_s1.bias ,24, 24, 6, 4);
 
     apply_sigmoid <<<64,64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
 
