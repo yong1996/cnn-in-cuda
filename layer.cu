@@ -158,7 +158,7 @@ __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][2
 
 
 // input_pointer, output_pointer, inputimage_height, inputimage_width, outputimage_channel, pool_size 
-__global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6][6][6], int H_in, int W_in, int M, int pool_size){
+__global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6][6][6], float weight[1][4][4], float bias[1] ,int H_in, int W_in, int M, int pool_size){
     int n, m, h, w, p, q;
 	int H_out = H_in/pool_size;
 	int W_out = W_in/pool_size;
@@ -178,13 +178,13 @@ __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6
 			if(h < H_out && w < W_out)
 				// acc = acc + input[n*(M*H_in*W_in)+ m*(H_in*W_in) +
 				//               (pool_size * h + p)*(W_in) + (pool_size * w + q)] / (pool_size * pool_size);
-                acc = acc + input[m][h+p][w+q] / (pool_size * pool_size);
+                acc = acc + input[m][h+p][w+q] * weight[0][h][q];
 	}
 	__syncthreads();
 	if(h < H_out && w < W_out)
 	{
 		// Y[n*(M*H_out*W_out)+ m*(H_out*W_out) + h*(W_out) + w] = acc;
-		output[m][h][w] = acc;
+		output[m][h][w] = acc + bias[0];
 
 	}
 }

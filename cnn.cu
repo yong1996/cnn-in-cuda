@@ -94,6 +94,7 @@ void forward(const double data[28][28]){
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
 
     ConvLayerForward_Kernel_1<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, 1, 28, 28, 24, 5, 6);
+
     apply_sigmoid <<<64,64>>>(l_c1.preact, l_c1.output, l_c1.bytes);
    
  
@@ -102,7 +103,14 @@ void forward(const double data[28][28]){
     bz = ceil((float)6/TILE_WIDTH)*ceil((float)6/TILE_WIDTH);
     dim3 gridDimPool(1, 6, bz);
     dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
-    MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, 24, 24, 6, 4);
+    //MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, 24, 24, 6, 4);
+    MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6][6][6], (float (*)[4][4])l_s1.weight, l_s1.bias ,24, 24, 6, 4);
+
+
+
+
+
+
     FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>(
             l_f.output,
             l_f.d_preact,
