@@ -93,7 +93,7 @@ void forward(const double data[28][28]){
     dim3 gridDim(1, 6, bz);
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
 
-    ConvLayerForward_Kernel_1<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, 1, 28, 28, 24, 5, 6);
+    ConvLayerForward_Kernel_1<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 28, 28, 24, 5, 6);
     apply_sigmoid <<<64,64>>>(l_c1.preact, l_c1.output, l_c1.bytes);
    
 
@@ -125,7 +125,7 @@ void forward(const double data[28][28]){
     dim3 gridDimPool(1, 6, bz);
     dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
     //MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, 24, 24, 6, 4);
-    MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>(float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, (float (*)[4][4])l_s1.weight, l_s1.bias ,24, 24, 6, 4);
+    MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, (float (*)[4][4])l_s1.weight, l_s1.bias ,24, 24, 6, 4);
 
     apply_sigmoid <<<64,64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
 
@@ -244,49 +244,54 @@ void forward(const double data[28][28]){
 }
 
 void backward(){
-    int bz = ceil((float)10/TILE_WIDTH);
-    dim3 gridDimfc(1, 10, 1);
-    dim3 blockDimfc(6, 6, 6);
-    // FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10);
+    // int bz = ceil((float)10/TILE_WIDTH);
+    // dim3 gridDimfc(1, 10, 1);
+    // dim3 blockDimfc(6, 6, 6);
+
     // FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>(
-    //     (float (*)[6][6])l_s1.output, 
-    //     (float (*)[6][6][6])l_f.d_weight, 
-    //     l_f.output, 
-    //     l_f.preact, 
-    //     l_f.d_preact, 
-    //     l_f.bias, 
-    //     1, 6, 10);
+    //         l_f.output,
+    //         l_f.d_preact,
+    //         (float (*)[6][6]) l_s1.preact,
+    //         (float (*)[6][6][6]) l_f.d_weight,
+    //         l_f.bias
+    //     );
+    
+    // //pooling backward:
+    // dim3 gridDimPool(TILE_WIDTH,TILE_WIDTH);
+	// bz = ceil((float)24/TILE_WIDTH)*ceil((float)24/TILE_WIDTH);
+	// if( bz == 0 )bz = 1;
+	// dim3 blockDimPool(1, 6, bz);
+    // //input_pointer, Inputimage_height, Inputimage_width, output_pointer, Outputimage_channel, pool_size
+    // poolingLayer_backward_GPU<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.d_output, 24, 24, (float (*)[6][6])l_s1.preact, 6,  4);
+    
+    // //convolutional backward kernel
+    // bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
+    // dim3 gridDim(1, 6, bz);
+    // dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
 
-    FullyConLayerBackward_kernel<<<gridDimfc,blockDimfc>>>(
-            l_f.output,
-            l_f.d_preact,
-            (float (*)[6][6]) l_s1.preact,
-            (float (*)[6][6][6]) l_f.d_weight,
-            l_f.bias
-        );
+    // // ConvLayerBackward_Kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 24, 24, 6, 5, 6);
     
-    //pooling backward:
-    dim3 gridDimPool(TILE_WIDTH,TILE_WIDTH);
-	bz = ceil((float)24/TILE_WIDTH)*ceil((float)24/TILE_WIDTH);
-	if( bz == 0 )bz = 1;
-	dim3 blockDimPool(1, 6, bz);
-    //input_pointer, Inputimage_height, Inputimage_width, output_pointer, Outputimage_channel, pool_size
-    poolingLayer_backward_GPU<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.d_output, 24, 24, (float (*)[6][6])l_s1.preact, 6,  4);
-    
-    //convolutional backward kernel
-    bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
-    dim3 gridDim(1, 6, bz);
-    dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
+    // ConvLayerBackward_Kernel<<<gridDim,blockDim>>>(
+    //     (float (*)[28])l_input.output, 
+    //     (float (*)[24][24])l_c1.d_output, 
+    //     (float (*)[24][24])l_c1.preact, 
+    //     (float (*)[24][24])l_c1.d_preact, 
+    //     (float (*)[5][5])l_c1.d_weight, 
+    //     1, 24, 24, 6, 5, 6);
 
-    // ConvLayerBackward_Kernel<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 24, 24, 6, 5, 6);
-    
-    ConvLayerBackward_Kernel<<<gridDim,blockDim>>>(
-        (float (*)[28])l_input.output, 
-        (float (*)[24][24])l_c1.d_output, 
-        (float (*)[24][24])l_c1.preact, 
-        (float (*)[24][24])l_c1.d_preact, 
-        (float (*)[5][5])l_c1.d_weight, 
-        1, 24, 24, 6, 5, 6);
+
+    bp_weight_f<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
+	bp_bias_f<<<64, 64>>>(l_f.bias, l_f.d_preact);
+
+	bp_output_s1<<<64, 64>>>((float (*)[6][6])l_s1.d_output, (float (*)[6][6][6])l_f.weight, l_f.d_preact);
+	bp_preact_s1<<<64, 64>>>((float (*)[6][6])l_s1.d_preact, (float (*)[6][6])l_s1.d_output, (float (*)[6][6])l_s1.preact);
+	bp_weight_s1<<<64, 64>>>((float (*)[4][4])l_s1.d_weight, (float (*)[6][6])l_s1.d_preact, (float (*)[24][24])l_c1.output);
+	bp_bias_s1<<<64, 64>>>(l_s1.bias, (float (*)[6][6])l_s1.d_preact);
+
+	bp_output_c1<<<64, 64>>>((float (*)[24][24])l_c1.d_output, (float (*)[4][4])l_s1.weight, (float (*)[6][6])l_s1.d_preact);
+	bp_preact_c1<<<64, 64>>>((float (*)[24][24])l_c1.d_preact, (float (*)[24][24])l_c1.d_output, (float (*)[24][24])l_c1.preact);
+	bp_weight_c1<<<64, 64>>>((float (*)[5][5])l_c1.d_weight, (float (*)[24][24])l_c1.d_preact, (float (*)[28])l_input.output);
+	bp_bias_c1<<<64, 64>>>(l_c1.bias, (float (*)[24][24])l_c1.d_preact);
 
 
     apply_grad<<<64, 64>>>(l_f.weight, l_f.d_weight, l_f.M * l_f.N);
@@ -298,9 +303,9 @@ void backward(){
 
 static void learn(){
 
-    printf("test 09\n");
-    for(int i=0; i< 10; i++){
-    // // for(int i=0; i<10; i++){
+    printf("test 1\n");
+    for(int i=0; i< train_cnt - 10; i++){
+    //for(int i=0; i<10; i++){
     //     printf("label: %d \n", train_set[i].label);
 
         l_f.bp_clear();
@@ -311,33 +316,42 @@ static void learn(){
         makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
         backward();
 
+     }
+
+     for (int i = 0; i < 10; i++){
+        l_f.bp_clear();
+		l_s1.bp_clear();
+		l_c1.bp_clear();
         
-    printf("label: %d \n", train_set[i].label);
+        forward(train_set[i].data);
+        makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
+        backward();
+
+
+        printf("label: %d \n", train_set[i].label);
     
-    float *r1 = (float *)malloc(sizeof(float) * 10);
-
-    cudaMemcpy(r1, l_f.preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+        float *r1 = (float *)malloc(sizeof(float) * 10);
     
-
-    printf("ConvLayerForward_Kernel: \n");
-    for (int i = 0; i < 10; i++){
-        printf("%.2f ",*(r1 + i));
-    }
-    printf("\n preact-----------------------------------\n");
-
-    float *r2 = (float *)malloc(sizeof(float) * 10);
-
-    cudaMemcpy(r2, l_f.output, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(r1, l_f.preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+        
     
-
-    printf("ConvLayerForward_Kernel: \n");
-    for (int i = 0; i < 10; i++){
-        printf("%.2f ",*(r2 + i));
-    }
-    printf("\n output -----------------------------------\n\n");
-
-
-    }
+        printf("ConvLayerForward_Kernel: \n");
+        for (int i = 0; i < 10; i++){
+            printf("%.2f ",*(r1 + i));
+        }
+        printf("\n preact-----------------------------------\n");
+    
+        float *r2 = (float *)malloc(sizeof(float) * 10);
+    
+        cudaMemcpy(r2, l_f.output, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+        
+    
+        printf("ConvLayerForward_Kernel: \n");
+        for (int i = 0; i < 10; i++){
+            printf("%.2f ",*(r2 + i));
+        }
+        printf("\n output -----------------------------------\n\n");
+     }
     
 }
 

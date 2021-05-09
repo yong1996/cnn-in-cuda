@@ -130,7 +130,7 @@ __global__ void apply_grad(float *output, float *grad, const int N)
 #define TILE_WIDTH 16
 
 //input_pointer,  Output_pointer, W_pointer, Inputimage_channel, Inputimage_height, Inputimage_width , Outputimage_width, W_width_height, Outputimage_channel
-__global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], int C, int H_in, int W_in, int W_out, int K, int M){
+__global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M){
 
     int H_out = H_in - K + 1;
 	int n, m, h, w, c, p, q;
@@ -148,12 +148,11 @@ __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][2
 				if(h < H_out && w < W_out)
                     acc += input[h+p][w+q] * weight[m][p][q];
 	}
+	__syncthreads();
 	if(h < H_out && w < W_out)
 	{
-        output[m][h][w] = acc;
+        output[m][h][w] = acc + bias[m];
     }
-
-
 }
 
 

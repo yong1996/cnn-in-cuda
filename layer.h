@@ -51,7 +51,8 @@ __global__ void apply_grad(float *output, float *grad, const int N);
 __global__ void makeError(float *err, float *output, unsigned int Y, const int N);
 
 //__global__ void ConvLayerForward_Kernel_1(int C, int W_grid, int K, float input[28][28], float output[6][24][24], float weight[6][5][5]);
-__global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], int C, int H_in, int W_in, int W_out, int K, int M);
+// __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], int C, int H_in, int W_in, int W_out, int K, int M);
+__global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M);
 __global__ void ConvLayerForward_Kernel_bias_1(float input[6][24][24], float bias[1]);
 
 // __global__ void ConvLayerBackward_Kernel(float input[28][28], float d_output[6][24][24], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M);
