@@ -91,6 +91,38 @@ __global__ void FullyConLayerBackward_kernel(
 	float lf_bias[10]
 	);
 
+
+// ===============
+__global__ void bp_f(
+	float l_f_d_weight[10][6][6][6],
+	float l_f_d_preact[10],
+	float l_f_bias[10],
+	float l_f_weight[10][6][6][6],
+	float l_s1_output[6][6][6],
+	float l_s1_d_output[6][6][6],
+	float l_s1_d_preact[6][6][6]);
+
+__global__ void bp_s1(
+	float l_s1_preact[6][6][6],
+	float l_s1_d_output[6][6][6],
+	float l_s1_d_preact[6][6][6],
+	float l_s1_d_weight[6][4][4],
+	float l_s1_weight[6][4][4],
+	float l_c1_output[6][24][24],
+	float l_c1_d_output[6][24][24],
+	float l_s1_bias[6]);
+
+__global__ void bp_c1(
+	float l_c1_preact[6][24][24],
+	float l_c1_d_preact[6][24][24],
+	float l_c1_d_output[6][24][24],
+	float l_c1_d_weight[6][5][5],
+	float l_input_output[28][28],
+	float l_c1_bias[6]);
+
+//===========
+
+
 //test
 __global__ void softmax(float *error, float *output, unsigned int label, unsigned int size);
 __global__ void fp_preact_c1(float input[28][28], float preact[6][24][24], float weight[6][5][5]);

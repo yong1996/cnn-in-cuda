@@ -288,18 +288,92 @@ void backward(){
     //     1, 24, 24, 6, 5, 6);
 
 
+//====================
+
+// dim3 gridDimfc(1, 10, 1);
+// dim3 blockDimfc(6, 6, 6);
+// bp_f<<<gridDimfc, blockDimfc>>>(
+//     (float (*)[6][6][6])l_f.d_weight, 
+//     l_f.d_preact,
+//     l_f.bias,
+//     (float (*)[6][6][6]) l_f.weight,
+//     (float (*)[6][6])l_s1.output,
+//     (float (*)[6][6])l_s1.d_output,
+//     (float (*)[6][6])l_s1.d_preact);
+
+// dim3 gridDims(1, 6, 1);
+// dim3 blockDims(6, 6, 1);
+// bp_s1<<<gridDims, blockDims>>>(
+//     (float (*)[6][6])l_s1.output,
+//     (float (*)[6][6])l_s1.d_output,
+//     (float (*)[6][6])l_s1.d_preact,
+//     (float (*)[4][4])l_s1.d_weight,
+//     (float (*)[4][4])l_s1.weight,
+//     (float (*)[24][24])l_c1.output,
+//     (float (*)[24][24])l_c1.d_output,
+//     l_s1.bias);
+
+// dim3 gridDimc(1, 6, 1);
+// dim3 blockDimc(24, 24, 1);
+// bp_c1<<<gridDimc, blockDimc>>>(
+//     (float (*)[24][24])l_c1.preact,
+//     (float (*)[24][24])l_c1.d_preact,
+//     (float (*)[24][24])l_c1.d_output,
+//     (float (*)[5][5])l_c1.d_weight,
+//     (float (*)[28])l_input.output,
+//     l_c1.bias);
+
+//===================
+// //pd_f
+// dim3 gridDimfc(1, 10, 1);
+// dim3 blockDimfc(6, 6, 6);
+// bp_f<<<gridDimfc, blockDimfc>>>(
+//     (float (*)[6][6][6])l_f.d_weight, 
+//     l_f.d_preact,
+//     l_f.bias,
+//     (float (*)[6][6][6]) l_f.weight,
+//     (float (*)[6][6])l_s1.output,
+//     (float (*)[6][6])l_s1.d_output,
+//     (float (*)[6][6])l_s1.d_preact);
+
     bp_weight_f<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
 	bp_bias_f<<<64, 64>>>(l_f.bias, l_f.d_preact);
 
 	bp_output_s1<<<64, 64>>>((float (*)[6][6])l_s1.d_output, (float (*)[6][6][6])l_f.weight, l_f.d_preact);
-	bp_preact_s1<<<64, 64>>>((float (*)[6][6])l_s1.d_preact, (float (*)[6][6])l_s1.d_output, (float (*)[6][6])l_s1.preact);
-	bp_weight_s1<<<64, 64>>>((float (*)[4][4])l_s1.d_weight, (float (*)[6][6])l_s1.d_preact, (float (*)[24][24])l_c1.output);
-	bp_bias_s1<<<64, 64>>>(l_s1.bias, (float (*)[6][6])l_s1.d_preact);
 
-	bp_output_c1<<<64, 64>>>((float (*)[24][24])l_c1.d_output, (float (*)[4][4])l_s1.weight, (float (*)[6][6])l_s1.d_preact);
-	bp_preact_c1<<<64, 64>>>((float (*)[24][24])l_c1.d_preact, (float (*)[24][24])l_c1.d_output, (float (*)[24][24])l_c1.preact);
-	bp_weight_c1<<<64, 64>>>((float (*)[5][5])l_c1.d_weight, (float (*)[24][24])l_c1.d_preact, (float (*)[28])l_input.output);
-	bp_bias_c1<<<64, 64>>>(l_c1.bias, (float (*)[24][24])l_c1.d_preact);
+// // pd_s
+dim3 gridDims(1, 6, 1);
+dim3 blockDims(6, 6, 1);
+bp_s1<<<gridDims, blockDims>>>(
+    (float (*)[6][6])l_s1.preact,
+    (float (*)[6][6])l_s1.d_output,
+    (float (*)[6][6])l_s1.d_preact,
+    (float (*)[4][4])l_s1.d_weight,
+    (float (*)[4][4])l_s1.weight,
+    (float (*)[24][24])l_c1.output,
+    (float (*)[24][24])l_c1.d_output,
+    l_s1.bias);
+
+    // bp_preact_s1<<<64, 64>>>((float (*)[6][6])l_s1.d_preact, (float (*)[6][6])l_s1.d_output, (float (*)[6][6])l_s1.preact);
+	// bp_weight_s1<<<64, 64>>>((float (*)[4][4])l_s1.d_weight, (float (*)[6][6])l_s1.d_preact, (float (*)[24][24])l_c1.output);
+	// bp_bias_s1<<<64, 64>>>(l_s1.bias, (float (*)[6][6])l_s1.d_preact);
+
+	// bp_output_c1<<<64, 64>>>((float (*)[24][24])l_c1.d_output, (float (*)[4][4])l_s1.weight, (float (*)[6][6])l_s1.d_preact);
+
+// // pd_c
+dim3 gridDimc(1, 6, 1);
+dim3 blockDimc(24, 24, 1);
+bp_c1<<<gridDimc, blockDimc>>>(
+    (float (*)[24][24])l_c1.preact,
+    (float (*)[24][24])l_c1.d_preact,
+    (float (*)[24][24])l_c1.d_output,
+    (float (*)[5][5])l_c1.d_weight,
+    (float (*)[28])l_input.output,
+    l_c1.bias);
+
+    // bp_preact_c1<<<64, 64>>>((float (*)[24][24])l_c1.d_preact, (float (*)[24][24])l_c1.d_output, (float (*)[24][24])l_c1.preact);
+	// bp_weight_c1<<<64, 64>>>((float (*)[5][5])l_c1.d_weight, (float (*)[24][24])l_c1.d_preact, (float (*)[28])l_input.output);
+	// bp_bias_c1<<<64, 64>>>(l_c1.bias, (float (*)[24][24])l_c1.d_preact);
 
 
     apply_grad<<<64, 64>>>(l_f.weight, l_f.d_weight, l_f.M * l_f.N);
@@ -311,7 +385,7 @@ void backward(){
 
 static void learn(){
 
-    printf("test 3\n");
+    printf("test 4\n");
     for(int i=0; i< train_cnt - 10; i++){
     //for(int i=0; i<10; i++){
     //     printf("label: %d \n", train_set[i].label);
@@ -336,29 +410,29 @@ static void learn(){
         backward();
 
 
-        printf("label: %d \n", train_set[i].label);
+        // printf("label: %d \n", train_set[i].label);
     
-        float *r1 = (float *)malloc(sizeof(float) * 10);
+        // float *r1 = (float *)malloc(sizeof(float) * 10);
     
-        cudaMemcpy(r1, l_f.preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+        // cudaMemcpy(r1, l_f.preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
         
     
-        printf("ConvLayerForward_Kernel: \n");
-        for (int i = 0; i < 10; i++){
-            printf("%.2f ",*(r1 + i));
-        }
-        printf("\n preact-----------------------------------\n");
+        // printf("ConvLayerForward_Kernel: \n");
+        // for (int i = 0; i < 10; i++){
+        //     printf("%.2f ",*(r1 + i));
+        // }
+        // printf("\n preact-----------------------------------\n");
     
-        float *r2 = (float *)malloc(sizeof(float) * 10);
+        // float *r2 = (float *)malloc(sizeof(float) * 10);
     
-        cudaMemcpy(r2, l_f.output, 10 * sizeof(float), cudaMemcpyDeviceToHost);
+        // cudaMemcpy(r2, l_f.output, 10 * sizeof(float), cudaMemcpyDeviceToHost);
         
     
-        printf("ConvLayerForward_Kernel: \n");
-        for (int i = 0; i < 10; i++){
-            printf("%.2f ",*(r2 + i));
-        }
-        printf("\n output -----------------------------------\n\n");
+        // printf("ConvLayerForward_Kernel: \n");
+        // for (int i = 0; i < 10; i++){
+        //     printf("%.2f ",*(r2 + i));
+        // }
+        // printf("\n output -----------------------------------\n\n");
      }
     
 }
@@ -395,6 +469,7 @@ static void test()
 		}
 	}
 
+    printf("1 s c ");
 	printf("Error Rate: %.2lf%%\n", double(error) / double(test_cnt) * 100.0);
 }
 
