@@ -354,6 +354,109 @@ __global__ void ConvLayerBackward_Kernel(
 
 
 
+
+// bp
+/*
+// =========================
+
+__global__ void bp_f_s1(
+	float l_f_d_weight[10][6][6][6],
+	float l_f_d_preact[10],
+	float l_f_bias[10],
+	float l_f_weight[10][6][6][6],
+	float l_s1_output[6][6][6],
+	float l_s1_d_output[6][6][6],
+	float l_s1_d_preact[6][6][6],
+	float l_s1_bias[1]
+){
+	int n, m, h, w, y, p, q, o;
+	n = blockIdx.x;
+	m = blockIdx.y;  // 10
+	h = threadIdx.x;  // 6
+	w = threadIdx.y;  // 6
+	y = threadIdx.z;  // 6
+
+
+	l_f_d_weight[m][h][w][y] = l_f_d_preact[m] * l_s1_output[h][w][y];
+	l_s1_d_output[h][w][y] += l_f_weight[m][h][w][y] * l_f_d_preact[m];
+
+	if(h==0 && w==0 && y==0 )
+		l_f_bias[m] += dt * l_f_d_preact[m];
+
+
+	// if(m == 1) {
+	// 	l_s1_d_preact[h][w][y] = l_s1_d_output[x][w][y] * l_s1_output[x][w][y] * (1 - l_s1_output[x][w][y]);
+	// 	__syncthreads();
+
+	// 	bias[0] += dt * l_s1_d_preact[h][w][y]/(6*6*6);
+	// }
+}
+
+__global__ void bp_s1(
+	float l_s1_output[6][6][6],
+	float l_s1_d_output[6][6][6],
+	float l_s1_d_preact[6][6][6],
+	float l_s1_d_weight[6][4][4],
+	float l_c1_output[6][24][24],
+	float l_c1_d_output[6][24][24]
+
+){
+	int n, m, h, w, y, p, q, o;
+	n = blockIdx.x;
+	m = blockIdx.y;  // 6
+	h = threadIdx.x;  // 6
+	w = threadIdx.y;  // 6
+	y = threadIdx.z;  // -
+
+
+
+	l_s1_d_preact[m][h][w] = l_s1_d_output[m][h][w] * l_s1_output[m][h][w] * (1 - l_s1_output[m][h][w]);
+	__syncthreads();
+
+	bias[0] += dt * l_s1_d_preact[m][h][w]/(6*6*6);
+
+	for(int i=0; i<4; i++) {
+		l_s1_d_weight[m][h][w] += l_s1_d_preact[m][h][w] * l_c1_output[m][h*4+i][w*4+i];
+		l_c1_d_output[m][h*4+i][w*4+i], n_weight[m][h][w] * nd_preact[m][h][w];
+	}
+}
+
+
+__global__ void bp_c1(
+	float l_c1_preact[6][24][24],
+	float l_c1_d_preact[6][24][24],
+	float l_c1_d_output[6][24][24],
+	float l_c1_d_weight[6][5][5],
+	float l_input_output[28][28],
+	float l_c1_bias[6]
+
+){
+	int n, m, h, w, y, p, q, o;
+	n = blockIdx.x;
+	m = blockIdx.y;  // 6
+	h = threadIdx.x;  // 24
+	w = threadIdx.y;  // 24
+	y = threadIdx.z;  // -
+
+
+	float o = sigmoid(l_c1_preact[m][h][w]);
+	l_c1_d_preact[m][h][w] = l_c1_d_output[m][h][w] * o * (1 - o);
+
+	for(int i=0; i<5; i++){
+		for(int j=0; j<5; j++){
+			l_c1_d_weight[m][i][j] += l_c1_d_preact[m][h][w] * l_input_output[h + i][w + j] / (24*24);
+		}
+	}
+
+	l_c1_bias[m] += dt * l_c1_d_preact[m][h][w] / (6*24*24);
+}
+
+
+// =================================
+
+*/
+
+
 __global__ void fp_preact_c1(float input[28][28], float preact[6][24][24], float weight[6][5][5])
 {
 	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
