@@ -189,6 +189,9 @@ __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6
 	}
 }
 
+
+
+
 // input_height, input_width, weight_width, output_height, output_width
 //      1             6          10          1              10
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
@@ -253,43 +256,34 @@ __global__ void fp_bias_f(float preact[10], float bias[10])
 }
 
 
-
 __global__ void FullyConLayerBackward_kernel(
-	float output[6][6][6], 
-	float weight[10][6][6][6], 
-	float d_output[10], 
-	float preact[10], 
-	float d_preact[10], 
-	float bias[10], 
-	int H_in, int W_in, int W_we) {
-		
-    int n, m, h, w, p, q;
-	int W_out = W_we, H_out = H_in;
-	int W_grid = ceilf((float)W_out/TILE_WIDTH);
-	if(W_grid==0)
-		W_grid = 1;
+	float lf_output[10],
+	float l_f_d_preact[10],
+	float ls1_preact[6][6][6],
+	float lf_weight[10][6][6][6],
+	float lf_d_weight[10][6][6][6],
+	float lf_bias[10]
+	) {
+
+	int n, m, h, w, y, p, q, o;
 
 	n = blockIdx.x;
-	m = blockIdx.y;
-	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
-	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+	m = blockIdx.y;  // 10
+	h = threadIdx.x;  // 6
+	w = threadIdx.y;  // 6
+	y = threadIdx.z;  // 6
 
-
-	float o = sigmoid(preact[w]);
+	l_f_d_preact[m] *= lf_output[m] * (1- lf_output[m]);
 	
-	// float dv = d_output[w] * o * (1 - o);
-	d_preact[w] = d_output[w] * o * (1 - o);
+	// ls1_d_preact[m] = l_f_d_preact[m] * lf_output[m] * (1- lf_output[m]);
+
+	lf_bias[m] += dt + l_f_d_preact[m];
 	__syncthreads();
-	
 
-	float Pvalue = 0;
-	for (p = 0; p < W_we; p++) {
-		for (q = 0; q < W_we; q++){
-			if(h < H_out && w < W_out)
-				weight[m][w][p][q] = d_preact[w] * output[w][p][q];
-		}
-		bias[w] += 0.1 * d_preact[w];
-	}
+
+	lf_d_weight[m][h][w][y] = l_f_d_preact[m] * ls1_preact[h][w][y] ;
+	lf_d_weight[m][h][w][y] += lf_weight[m][h][w][y];
+	__syncthreads();
 }
 
 
@@ -313,7 +307,7 @@ __global__ void poolingLayer_backward_GPU(float input[6][24][24], int H_in, int 
 	for (p = 0; p < pool_size; p++) { // loop over KxK input samples
 		for (q = 0; q < pool_size; q++)
 			if(h < H_out && w < W_out)
-			input[m][h+p][w+q] = output[m][h][w];
+			input[m][h+p][w+q] = output[m][h][w] / (pool_size * pool_size);
 	}
 	__syncthreads();
 
