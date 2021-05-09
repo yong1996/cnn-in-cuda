@@ -311,7 +311,7 @@ void backward(){
 
 static void learn(){
 
-    printf("test 2\n");
+    printf("test 3\n");
     for(int i=0; i< train_cnt - 10; i++){
     //for(int i=0; i<10; i++){
     //     printf("label: %d \n", train_set[i].label);
