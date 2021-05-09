@@ -422,7 +422,7 @@ __global__ void bp_s1(
 }
 
 
-__global__ void bp_s1(
+__global__ void bp_c1(
 	float l_c1_preact[6][24][24],
 	float l_c1_d_preact[6][24][24],
 	float l_c1_d_output[6][24][24],
@@ -448,7 +448,7 @@ __global__ void bp_s1(
 		}
 	}
 
-	l_c1_bias[i1], dt * l_c1_d_preact[m][h][w] / (6*24*24);
+	l_c1_bias[m] += dt * l_c1_d_preact[m][h][w] / (6*24*24);
 }
 
 
