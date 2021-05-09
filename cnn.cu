@@ -325,21 +325,21 @@ void backward(){
 
 //===================
 // //pd_f
-// dim3 gridDimfc(1, 10, 1);
-// dim3 blockDimfc(6, 6, 6);
-// bp_f<<<gridDimfc, blockDimfc>>>(
-//     (float (*)[6][6][6])l_f.d_weight, 
-//     l_f.d_preact,
-//     l_f.bias,
-//     (float (*)[6][6][6]) l_f.weight,
-//     (float (*)[6][6])l_s1.output,
-//     (float (*)[6][6])l_s1.d_output,
-//     (float (*)[6][6])l_s1.d_preact);
+dim3 gridDimfc(1, 10, 1);
+dim3 blockDimfc(6, 6, 6);
+bp_f<<<gridDimfc, blockDimfc>>>(
+    (float (*)[6][6][6])l_f.d_weight, 
+    l_f.d_preact,
+    l_f.bias,
+    (float (*)[6][6][6]) l_f.weight,
+    (float (*)[6][6])l_s1.output,
+    (float (*)[6][6])l_s1.d_output,
+    (float (*)[6][6])l_s1.d_preact);
 
-    bp_weight_f<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
-	bp_bias_f<<<64, 64>>>(l_f.bias, l_f.d_preact);
+    // bp_weight_f<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
+	// bp_bias_f<<<64, 64>>>(l_f.bias, l_f.d_preact);
 
-	bp_output_s1<<<64, 64>>>((float (*)[6][6])l_s1.d_output, (float (*)[6][6][6])l_f.weight, l_f.d_preact);
+	// bp_output_s1<<<64, 64>>>((float (*)[6][6])l_s1.d_output, (float (*)[6][6][6])l_f.weight, l_f.d_preact);
 
 // // pd_s
 dim3 gridDims(1, 6, 1);
@@ -469,7 +469,7 @@ static void test()
 		}
 	}
 
-    printf("1 s c ");
+    printf("f s1 c ");
 	printf("Error Rate: %.2lf%%\n", double(error) / double(test_cnt) * 100.0);
 }
 
