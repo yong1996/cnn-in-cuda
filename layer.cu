@@ -99,11 +99,6 @@ __global__ void backward_sigmoid(float* X, int size_in)
 	}
 }
 
-// softmax
-__global__ void softmax(float *error, float *output, unsigned int label, unsigned int size){
-	int tid = threadIdx.x;
-	
-}
 
 __global__ void makeError(float *err, float *output, unsigned int Y, const int N)
 {
@@ -294,16 +289,15 @@ __global__ void FullyConLayerBackward_kernel(
 	y = threadIdx.z;  // 6
 
 	l_f_d_preact[m] *= lf_output[m] * (1- lf_output[m]);
-	
+	__syncthreads();
 	// ls1_d_preact[m] = l_f_d_preact[m] * lf_output[m] * (1- lf_output[m]);
 
 	lf_bias[m] += dt + l_f_d_preact[m];
-	__syncthreads();
+	
 
 
 	lf_d_weight[m][h][w][y] = l_f_d_preact[m] * ls1_preact[h][w][y] ;
 	lf_d_weight[m][h][w][y] += lf_weight[m][h][w][y];
-	__syncthreads();
 }
 
 
@@ -397,26 +391,19 @@ __global__ void bp_f(
 
 
 	l_f_d_weight[m][h][w][y] = l_f_d_preact[m] * l_s1_output[h][w][y];
-	l_s1_d_output[h][w][y] += l_f_weight[m][h][w][y] * l_f_d_preact[m];
+	// l_s1_d_output[h][w][y] += l_f_weight[m][h][w][y] * l_f_d_preact[m];
 
+	atomicAdd(&l_s1_d_output[h][w][y], l_f_weight[m][h][w][y] * l_f_d_preact[m]);
 	if(h==0 && w==0 && y==0 )
 		l_f_bias[m] += dt * l_f_d_preact[m];
-
-
-	// if(m == 1) {
-	// 	l_s1_d_preact[h][w][y] = l_s1_d_output[x][w][y] * l_s1_output[x][w][y] * (1 - l_s1_output[x][w][y]);
-	// 	__syncthreads();
-
-	// 	bias[0] += dt * l_s1_d_preact[h][w][y]/(6*6*6);
-	// }
 }
 
 __global__ void bp_s1(
 	float l_s1_preact[6][6][6],
 	float l_s1_d_output[6][6][6],
 	float l_s1_d_preact[6][6][6],
-	float l_s1_d_weight[6][4][4],
-	float l_s1_weight[6][4][4],
+	float l_s1_d_weight[1][4][4],
+	float l_s1_weight[1][4][4],
 	float l_c1_output[6][24][24],
 	float l_c1_d_output[6][24][24],
 	float l_s1_bias[6]
@@ -438,8 +425,11 @@ __global__ void bp_s1(
 
 	for(int i=0; i<4; i++) {
 		for(int j=0; j<4; j++) {
-			l_s1_d_weight[m][h][w] += l_s1_d_preact[m][h][w] * l_c1_output[m][h*4+i][w*4+j];
-			l_c1_d_output[m][h*4+i][w*4+j] += l_s1_weight[m][h][w] * l_s1_d_preact[m][h][w];
+			// l_s1_d_weight[0][i][j] += l_s1_d_preact[m][h][w] * l_c1_output[m][h*4+i][w*4+j];
+			// l_c1_d_output[m][h*4+i][w*4+j] += l_s1_weight[0][i][j] * l_s1_d_preact[m][h][w];
+
+			atomicAdd(&l_s1_d_weight[0][i][j], l_s1_d_preact[m][h][w] * l_c1_output[m][h*4+i][w*4+j]);
+			atomicAdd(&l_c1_d_output[m][h*4+i][w*4+j], l_s1_weight[0][i][j] * l_s1_d_preact[m][h][w]);
 		}
 	}
 }
