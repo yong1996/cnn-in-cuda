@@ -175,23 +175,6 @@ __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][2
 }
 
 
-__global__ void ConvLayerForward_Kernel_bias_1(float preact[6][24][24], float bias[1]){
-    const int pos = blockIdx.x * blockDim.x + threadIdx.x;
-	const int size = blockDim.x * gridDim.x;
-
-	const int N = 6*24*24;
-
-	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
-		int idx = n;
-		const int i1 = ((idx /= 1	) % 6);
-		const int i2 = ((idx /= 6	) % 24);
-		const int i3 = ((idx /= 24	) % 24);
-
-		preact[i1][i2][i3] += bias[i1];
-	}
-}
-
-
 // input_pointer, output_pointer, inputimage_height, inputimage_width, outputimage_channel, pool_size 
 __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6][6][6], int H_in, int W_in, int M, int pool_size){
     int n, m, h, w, p, q;
@@ -224,79 +207,67 @@ __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6
 	}
 }
 
-//gemm_with_bias_h<<<numBlocks,threadsPerBlock>>>(X_pointer, W_pointer, Output_pointer, b_pointer, X_height, X_width, W_width, Output_height, Output_width);
-// __global__ void gemm_h_bias(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out){
-
-// 	int M_height_in = 1;
-// 	int M_width_N_height_in = 6*6*6;
-// 	int N_width_in = 10;
-// 	int height_out = 1;
-// 	int width_out = 10;
-
-// 	__shared__ float Mds[TILE_WIDTH][TILE_WIDTH];
-// 	__shared__ float Nds[TILE_WIDTH][TILE_WIDTH];
-
-// 	int bx = blockIdx.x;
-// 	int by = blockIdx.y;
-// 	int tx = threadIdx.x;
-// 	int ty = threadIdx.y;
-
-// 	int row = by * TILE_WIDTH + ty;
-// 	int col = bx * TILE_WIDTH + tx;
-
-// 	float Pvalue = 0;
-
-// 	//width
-// 	for(int m = 0 ; m < ceilf((float)M_width_N_height_in / TILE_WIDTH) ; ++m)
-// 	{
-// 		if(row < M_height_in && (m*TILE_WIDTH + tx) < M_width_N_height_in) // X
-// 			Mds[ty][tx] = input[row*M_width_N_height_in+(m*TILE_WIDTH + tx)];
-// 		else
-// 			Mds[ty][tx] = 0;
-// 		if((m*TILE_WIDTH + ty) < M_width_N_height_in && col < N_width_in) // W
-// 			Nds[ty][tx] = weight[(m*TILE_WIDTH + ty)*N_width_in + col];
-// 		else
-// 			Nds[ty][tx] = 0;
-// 		__syncthreads();
-
-// 		for(int k = 0 ; k < TILE_WIDTH ; ++k)
-// 		{
-// 			Pvalue += Mds[ty][k] * Nds[k][tx];
-// 		}
-
-// 		__syncthreads();
-// 	}
-
-// 	if(row < height_out && col < width_out)
-// 		output[row*width_out + col] = Pvalue + bias[col]; // Output
-// }
-
 
 //input_height, input_width, weight_width, output_height, output_width
 //      1             6          10          1              10
-__global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
-    int n, m, h, w, p, q;
-	int W_grid = ceilf((float)W_out/TILE_WIDTH);
-	if(W_grid==0)
-		W_grid = 1;
+__global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
+    __shared__ float Ns[10];
 
-	n = blockIdx.x;
-	m = blockIdx.y;
-	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
-	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+    int l, m, n, o, p, q;
 
-	float Pvalue = 0;
-	for (p = 0; p < W_we; p++) {
-		for (q = 0; q < W_we; q++){
-			if(h < H_out && w < W_out)
-				Pvalue += input[w][p][q] * weight[m][w][p][q];
-		}
-	}
-	__syncthreads();
+    int i, a, b, c;
+    l = blockIdx.x; // 1
+    i = blockIdx.y; // 10
+    n = blockIdx.z; // 1
+    a = threadIdx.x; // 6
+    b = threadIdx.y; // 6
+    c = threadIdx.z; // 6
 
-    if(w < W_out)
-		output[w] += Pvalue + bias[w]/W_out; // Output
+    // printf("")
+    Ns[i] = 0;
+    __syncthreads();
+
+    // Ns[o] += input[m][p][q] * weight[o][m][p][q];
+    Ns[i] += weight[i][a][b][c] * input[a][b][c];
+    // atomicAdd(&Ns[i], weight[i][a][b][c] * input[c][b][a]);
+    // atomicAdd(&Ns[o], weight[o][m][p][q] * input[m][p][q]);
+    __syncthreads();
+
+    // if(i < 10)
+        Ns[i] += bias[i];
+    __syncthreads();
+
+    if(i < 10 && a < 1 && b < 1 && c < 1)
+        output[i] = Ns[i]; // Output
 }
+
+// input_height, input_width, weight_width, output_height, output_width
+//      1             6          10          1              10
+// __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
+//     int n, m, h, w, y, p, q;
+//  int W_grid = ceilf((float)W_out/TILE_WIDTH);
+//  if(W_grid==0)
+//      W_grid = 1;
+
+//  n = blockIdx.x;
+//  m = blockIdx.y;  // 10
+//  h = threadIdx.x;  // 6
+//  w = threadIdx.y;  // 6
+//  y = threadIdx.z;  // 6
+
+//  float Pvalue = 0;
+//  for (p = 0; p < W_we; p++) {
+//      for (q = 0; q < W_we; q++){
+//          if(h < H_out && w < W_out)
+//          // Pvalue += input[y][h+p][w+q] * weight[m][y][h+p][w+q];
+//          Pvalue += input[h][w][y] * weight[m][h][w+p][y+q];
+//      }
+//  }
+//  __syncthreads();
+
+//     if(m < W_out)
+//      output[m] = Pvalue + bias[m]; // Output
+// }
 
 
 __global__ void fp_preact_f(float input[6][6][6], float preact[10], float weight[10][6][6][6])
@@ -510,3 +481,185 @@ __global__ void fp_bias_s1(float preact[6][6][6], float bias[1])
 }
 
 
+__global__ void bp_weight_f(float d_weight[10][6][6][6], float d_preact[10], float p_output[6][6][6])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 10*6*6*6;
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 10);
+		const int i2 = ((idx /= 10	) % 6);
+		const int i3 = ((idx /= 6	) % 6);
+		const int i4 = ((idx /= 6	) % 6);
+
+		d_weight[i1][i2][i3][i4] = d_preact[i1] * p_output[i2][i3][i4];
+	}
+}
+
+__global__ void bp_bias_f(float bias[10], float d_preact[10])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 10;
+
+	for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
+		bias[idx] += dt * d_preact[idx];
+	}
+}
+
+__global__ void bp_output_s1(float d_output[6][6][6], float n_weight[10][6][6][6], float nd_preact[10])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 10*6*6*6;
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 10);
+		const int i2 = ((idx /= 10	) % 6);
+		const int i3 = ((idx /= 6	) % 6);
+		const int i4 = ((idx /= 6	) % 6);
+
+		atomicAdd(&d_output[i2][i3][i4], n_weight[i1][i2][i3][i4] * nd_preact[i1]);
+	}
+}
+
+__global__ void bp_preact_s1(float d_preact[6][6][6], float d_output[6][6][6], float preact[6][6][6])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 6*6*6;
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 6);
+		const int i2 = ((idx /= 6	) % 6);
+		const int i3 = ((idx /= 6	) % 6);
+
+		const float o = sigmoid(preact[i1][i2][i3]);
+
+		d_preact[i1][i2][i3] = d_output[i1][i2][i3] * o * (1 - o);
+	}
+}
+
+__global__ void bp_weight_s1(float d_weight[1][4][4], float d_preact[6][6][6], float p_output[6][24][24])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 1*4*4*6*6*6;
+	const float d = pow(6.0f, 3.0f);
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 1);
+		const int i2 = ((idx /= 1	) % 4);
+		const int i3 = ((idx /= 4	) % 4);
+		const int i4 = ((idx /= 4	) % 6);
+		const int i5 = ((idx /= 6	) % 6);
+		const int i6 = ((idx /= 6	) % 6);
+
+		atomicAdd(&d_weight[i1][i2][i3], d_preact[i4][i5][i6] * p_output[i4][i5 * 4 + i2][i6 * 4 + i3]);
+	}
+}
+
+__global__ void bp_bias_s1(float bias[1], float d_preact[6][6][6])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 6*6*6;
+	const float d = pow(6.0f, 3.0f);
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 6);
+		const int i2 = ((idx /= 6	) % 6);
+		const int i3 = ((idx /= 6	) % 6);
+
+		atomicAdd(&bias[0], dt * d_preact[i1][i2][i3] / d);
+	}
+}
+
+__global__ void bp_output_c1(float d_output[6][24][24], float n_weight[1][4][4], float nd_preact[6][6][6])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 1*4*4*6*6*6;
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 1);
+		const int i2 = ((idx /= 1	) % 4);
+		const int i3 = ((idx /= 4	) % 4);
+		const int i4 = ((idx /= 4	) % 6);
+		const int i5 = ((idx /= 6	) % 6);
+		const int i6 = ((idx /= 6	) % 6);
+
+		atomicAdd(&d_output[i4][i5 * 4 + i2][i6 * 4 + i3], n_weight[i1][i2][i3] * nd_preact[i4][i5][i6]);
+	}
+}
+
+__global__ void bp_preact_c1(float d_preact[6][24][24], float d_output[6][24][24], float preact[6][24][24])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 6*24*24;
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 6);
+		const int i2 = ((idx /= 6	) % 24);
+		const int i3 = ((idx /= 24	) % 24);
+
+		const float o = sigmoid(preact[i1][i2][i3]);
+
+		d_preact[i1][i2][i3] = d_output[i1][i2][i3] * o * (1 - o);
+	}
+}
+
+__global__ void bp_weight_c1(float d_weight[6][5][5], float d_preact[6][24][24], float p_output[28][28])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 6*5*5*24*24;
+	const float d = pow(24.0f, 2.0f);
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 6);
+		const int i2 = ((idx /= 6	) % 5);
+		const int i3 = ((idx /= 5	) % 5);
+		const int i4 = ((idx /= 5	) % 24);
+		const int i5 = ((idx /= 24	) % 24);
+
+		atomicAdd(&d_weight[i1][i2][i3], d_preact[i1][i4][i5] * p_output[i4 + i2][i5 + i3] / d);
+	}
+}
+
+__global__ void bp_bias_c1(float bias[6], float d_preact[6][24][24])
+{
+	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+	const int size = blockDim.x * gridDim.x;
+
+	const int N = 6*24*24;
+	const float d = pow(24.0f, 2.0f);
+
+	for (int n = N * pos / size; n < N * (pos+1) / size; ++n) {
+		int idx = n;
+		const int i1 = ((idx /= 1	) % 6);
+		const int i2 = ((idx /= 6	) % 24);
+		const int i3 = ((idx /= 24	) % 24);
+
+		atomicAdd(&bias[i1], dt * d_preact[i1][i2][i3] / d);
+	}
+}

@@ -90,5 +90,17 @@ __global__ void fp_bias_s1(float preact[6][6][6], float bias[1]);
 __global__ void fp_preact_f(float input[6][6][6], float preact[10], float weight[10][6][6][6]);
 __global__ void fp_bias_f(float preact[10], float bias[10]);
 
+
+__global__ void bp_weight_f(float d_weight[10][6][6][6], float d_preact[10], float p_output[6][6][6]);
+__global__ void bp_bias_f(float bias[10], float d_preact[10]);
+__global__ void bp_output_s1(float d_output[6][6][6], float n_weight[10][6][6][6], float nd_preact[10]);
+__global__ void bp_preact_s1(float d_preact[6][6][6], float d_output[6][6][6], float preact[6][6][6]);
+__global__ void bp_weight_s1(float d_weight[1][4][4], float d_preact[6][6][6], float p_output[6][24][24]);
+__global__ void bp_bias_s1(float bias[1], float d_preact[6][6][6]);
+__global__ void bp_output_c1(float d_output[6][24][24], float n_weight[1][4][4], float nd_preact[6][6][6]);
+__global__ void bp_preact_c1(float d_preact[6][24][24], float d_output[6][24][24], float preact[6][24][24]);
+__global__ void bp_weight_c1(float d_weight[6][5][5], float d_preact[6][24][24], float p_output[28][28]);
+__global__ void bp_bias_c1(float bias[6], float d_preact[6][24][24]);
+
 #endif
 
