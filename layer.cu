@@ -356,7 +356,7 @@ __global__ void ConvLayerBackward_Kernel(
 
 
 // bp
-/*
+// /*
 // =========================
 
 __global__ void bp_f_s1(
@@ -397,9 +397,10 @@ __global__ void bp_s1(
 	float l_s1_d_output[6][6][6],
 	float l_s1_d_preact[6][6][6],
 	float l_s1_d_weight[6][4][4],
+	float l_s1_weight[6][4][4],
 	float l_c1_output[6][24][24],
-	float l_c1_d_output[6][24][24]
-
+	float l_c1_d_output[6][24][24],
+	float l_s1_bias[6]
 ){
 	int n, m, h, w, y, p, q, o;
 	n = blockIdx.x;
@@ -413,11 +414,11 @@ __global__ void bp_s1(
 	l_s1_d_preact[m][h][w] = l_s1_d_output[m][h][w] * l_s1_output[m][h][w] * (1 - l_s1_output[m][h][w]);
 	__syncthreads();
 
-	bias[0] += dt * l_s1_d_preact[m][h][w]/(6*6*6);
+	l_s1_bias[0] += dt * l_s1_d_preact[m][h][w]/(6*6*6);
 
 	for(int i=0; i<4; i++) {
 		l_s1_d_weight[m][h][w] += l_s1_d_preact[m][h][w] * l_c1_output[m][h*4+i][w*4+i];
-		l_c1_d_output[m][h*4+i][w*4+i], n_weight[m][h][w] * nd_preact[m][h][w];
+		l_c1_d_output[m][h*4+i][w*4+i] += l_s1_weight[m][h][w] * l_s1_d_preact[m][h][w];
 	}
 }
 
@@ -431,7 +432,7 @@ __global__ void bp_c1(
 	float l_c1_bias[6]
 
 ){
-	int n, m, h, w, y, p, q, o;
+	int n, m, h, w, y, p, q;
 	n = blockIdx.x;
 	m = blockIdx.y;  // 6
 	h = threadIdx.x;  // 24
@@ -454,7 +455,7 @@ __global__ void bp_c1(
 
 // =================================
 
-*/
+// */
 
 
 __global__ void fp_preact_c1(float input[28][28], float preact[6][24][24], float weight[6][5][5])
