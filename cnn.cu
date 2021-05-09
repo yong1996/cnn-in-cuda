@@ -96,85 +96,21 @@ void forward(const double data[28][28]){
     ConvLayerForward_Kernel_1<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, 1, 28, 28, 24, 5, 6);
     apply_sigmoid <<<64,64>>>(l_c1.preact, l_c1.output, l_c1.bytes);
    
-
-
-    // float *result = (float *)malloc(sizeof(float) * 24*24*6);
-
-    // cudaMemcpy(result,
-	// 	l_c1.preact,
-	// 	24*24*6 * sizeof(float),
-	// 	cudaMemcpyDeviceToHost);
-    
-
-    // for (int i = 0; i < 6; i++){
-    //     for (int j = 0; j <24; j++){
-    //         for (int z = 0; z < 24; z++){
-    //             printf("%.2f",*(result + i+j+z));
-    //         }
-    //         printf("\n");
-    //     }
-
-    //     printf("-----------------------------------\n");
-    // }
-
-    
-
+ 
 
     // for pooling layer example:
     bz = ceil((float)6/TILE_WIDTH)*ceil((float)6/TILE_WIDTH);
     dim3 gridDimPool(1, 6, bz);
     dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
     MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, 24, 24, 6, 4);
-    apply_sigmoid <<<64,64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
-
-    // float *result = (float *)malloc(sizeof(float) * 24*24*6);
-
-    // cudaMemcpy(result,
-	// 	l_c1.output,
-	// 	24*24*6 * sizeof(float),
-	// 	cudaMemcpyDeviceToHost);
-    
-
-    // for (int i = 0; i < 6; i++){
-    //     for (int j = 0; j <24; j++){
-    //         for (int z = 0; z < 24; z++){
-    //             printf("%.2f  ",*(result + i+j+z));
-    //         }
-    //         printf("\n");
-    //     }
-
-    //     printf("-----------------------------------\n");
-    // }
-
-    // float *pool_result = (float *)malloc(sizeof(float) * 6*6*6);
-
-    // cudaMemcpy(pool_result,
-	// 	l_s1.preact,
-	// 	6*6*6 * sizeof(float),
-	// 	cudaMemcpyDeviceToHost);
-    
-
-    // for (int i = 0; i < 6; i++){
-    //     for (int j = 0; j <6; j++){
-    //         for (int z = 0; z < 6; z++){
-    //             printf("%.2f  ",*(pool_result + i+j+z));
-    //         }
-    //         printf("\n");
-    //     }
-
-    //     printf("-----------------------------------\n");
-    // }
-    // printf("===========================\n\n");
-
-
-
+    //apply_sigmoid <<<64,64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
 
 
 
 
 
     // for fully connected layer
-    // bz = ceil((float)10/TILE_WIDTH);
+    // bz = ceil((float)10/TILE_WIDTH);   
     dim3 gridDimfc(1, 10, 1);
     dim3 blockDimfc(6, 6, 6);
 
@@ -197,47 +133,6 @@ void forward(const double data[28][28]){
 	// fp_bias_f<<<64, 64>>>(l_f.preact, l_f.bias);
 	apply_sigmoid<<<64, 64>>>(l_f.preact, l_f.output, l_f.bytes);
 
-
-
-
-
-    // float *result = (float *)malloc(sizeof(float) * 10);
-
-    // cudaMemcpy(result, l_f.preact, 10 * sizeof(float), cudaMemcpyDeviceToHost);
-    
-
-    // printf("ConvLayerForward_Kernel: \n");
-    // for (int i = 0; i < 10; i++){
-    //     printf("%.2f ",*(result + i));
-    // }
-    // printf("\n-----------------------------------\n");
-
-
-    // printf("===========================\n\n");
-    // printf("l_f.weight\n");
-    // float *fwr = (float *)malloc(sizeof(float) * 10*6*6*6);
-
-    // cudaMemcpy(fwr,
-	// 	l_f.weight,
-	// 	10*6*6*6 * sizeof(float),
-	// 	cudaMemcpyDeviceToHost);
-    
-
-    // for (int lk = 0; lk < 10; lk++){
-    //     for (int llk = 0; llk < 6; lli++){
-    //         for (int lj = 0; lj <6; lj++){
-    //             for (int lz = 0; lz < 6; lz++){
-    //                 // printf("%.2f  ",*(fwr + lk*10*6*6 + llk*6*6 + lj*6 +lz));
-    //                 printf("%.2f  ",*(fwr + lk+ llk+ lj+lz));
-    //             }
-    //             printf("\n");
-    //         }
-
-    //         printf("-----------------%d, %d------------------\n", lk, llk);
-    //     }
-    //     printf("******************* %d ******************* \n", lk);
-    // }
-    // printf("===========================\n\n");
 
 }
 
