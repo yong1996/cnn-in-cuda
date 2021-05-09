@@ -272,30 +272,106 @@ __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6
 // }
 
 
-//input_height, input_width, weight_width, output_height, output_width
+
+// for(j<6){
+// for(k<6){
+// for(l<6){
+// 	for(i<10){
+// 		output[i] += input[j][k][l] * weight[i][j][k][l]
+// 	}
+// }
+// }
+// }
+
+
+
+// 2x1     1x2
+// for(i<2){
+// 	for(j<1){
+// 		for(k<2){
+// 			// c[1][k] += a[i][j] * b[k][j]
+// 			for(l<6){
+//				c[i][k][l] += a[i][j][k] * b[k][j][l]
+//				c[i] += a[i][a][b][c] * b[c][b][a]
+// 			}
+// 		}
+// 	}
+// }
+
+
+// [p][q]         [q][1]         [q]
+// p q           q
+// hxw           hxw          hxw
+// 4x6           6x1     =    4x1
+
+// 1 2 3 4 5 6   1 
+// 2 3 4 5 6 7   2
+// 3 4 5 6 7 8   3
+// 4 5 6 7 8 9   4
+//               5
+// 			  6
+
+
+// __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
+//     __shared__ float Ns[10];
+
+// 	int l, m, n, o, p, q;
+
+// 	int i, a, b, c;
+// 	l = blockIdx.x; // 1
+// 	i = blockIdx.y; // 10
+// 	n = blockIdx.z; // 1
+// 	a = threadIdx.x; // 6
+// 	b = threadIdx.y; // 6
+// 	c = threadIdx.z; // 6
+
+// 	// printf("")
+// 	Ns[i] = 0;
+// 	__syncthreads();
+
+// 	// Ns[o] += input[m][p][q] * weight[o][m][p][q];
+// 	Ns[i] += weight[i][a][b][c] * input[a][b][c];
+// 	// atomicAdd(&Ns[i], weight[i][a][b][c] * input[c][b][a]);
+// 	// atomicAdd(&Ns[o], weight[o][m][p][q] * input[m][p][q]);
+// 	__syncthreads();
+
+// 	// if(i < 10)
+// 		Ns[i] += bias[i];
+// 	__syncthreads();
+
+//     if(i < 10 && a < 1 && b < 1 && c < 1)
+// 		output[i] = Ns[i]; // Output
+// }
+
+// input_height, input_width, weight_width, output_height, output_width
 //      1             6          10          1              10
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
-    int n, m, h, w, p, q;
+    int n, m, h, w, y, p, q, o;
 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
 	if(W_grid==0)
 		W_grid = 1;
 
 	n = blockIdx.x;
-	m = blockIdx.y;
-	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
-	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+	m = blockIdx.y;  // 10
+	h = threadIdx.x;  // 6
+	w = threadIdx.y;  // 6
+	y = threadIdx.z;  // 6
 
 	float Pvalue = 0;
-	for (p = 0; p < W_we; p++) {
-		for (q = 0; q < W_we; q++){
-			if(h < H_out && w < W_out)
-				Pvalue += input[w][p][q] * weight[m][w][p][q];
+	for (o = 0; o < 6; o++) {
+		for (p = 0; p < 6; p++) {
+			for (q = 0; q < 6; q++){
+				if(h < 6 && w < 6 && y < 6)
+				// Pvalue += input[y][h+p][w+q] * weight[m][y][h+p][w+q];
+				// Pvalue += input[h][w][y] * weight[m][h+o][w+p][y+q];
+				Pvalue += input[h][w][y] * weight[m][o][p][q];
+			}
 		}
 	}
 	__syncthreads();
 
-    if(w < W_out)
-		output[w] += Pvalue + bias[w]/W_out; // Output
+    if(m < W_out)
+		output[m] += Pvalue + bias[m]; // Output
 }
 
 
