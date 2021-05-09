@@ -81,6 +81,8 @@ void forward(const double data[28][28]){
     //printf("input image: %f\n", &l_input.output[0][0]);
     
 
+    int bz;
+
     int W_grid, H_grid;
     int W_out = 24, H_out = 24;
     //int M = 6;  // The first (x) dimension in the grid maps to the M output feature maps
@@ -89,14 +91,16 @@ void forward(const double data[28][28]){
     H_grid = H_out/TILE_WIDTH; 	// number of vertical tiles per output map
     //int Y = H_grid * W_grid; //The second (y) dimension in the grid maps to the tiles in the output feature maps
     //int C = 1, K = 5;
-    int bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
+    bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
     dim3 gridDim(1, 6, bz);
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
-
     ConvLayerForward_Kernel_1<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 28, 28, 24, 5, 6);
     apply_sigmoid <<<64,64>>>(l_c1.preact, l_c1.output, l_c1.bytes);
    
 
+    // fp_preact_c1<<<64, 64>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight);
+	// fp_bias_c1<<<64, 64>>>((float (*)[24][24])l_c1.preact, l_c1.bias);
+	// apply_sigmoid<<<64, 64>>>(l_c1.preact, l_c1.output, l_c1.bytes);
 
     // float *result = (float *)malloc(sizeof(float) * 24*24*6);
 
@@ -128,6 +132,10 @@ void forward(const double data[28][28]){
     MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, (float (*)[4][4])l_s1.weight, l_s1.bias ,24, 24, 6, 4);
 
     apply_sigmoid <<<64,64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
+
+
+
+    
 
     // float *result = (float *)malloc(sizeof(float) * 24*24*6);
 
@@ -177,10 +185,10 @@ void forward(const double data[28][28]){
 
     // for fully connected layer
     // bz = ceil((float)10/TILE_WIDTH);
-    dim3 gridDimfc(1, 10, 1);
-    dim3 blockDimfc(6, 6, 6);
+    // dim3 gridDimfc(1, 10, 1);
+    // dim3 blockDimfc(6, 6, 6);
 
-    FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10, 1, 10);
+    // FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10, 1, 10);
     
 
     // int Output_width = 10;
@@ -195,8 +203,8 @@ void forward(const double data[28][28]){
 	// fp_bias_s1<<<64, 64>>>((float (*)[6][6])l_s1.preact, l_s1.bias);
 	// apply_sigmoid<<<64, 64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
 
-	// fp_preact_f<<<64, 64>>>((float (*)[6][6])l_s1.output, l_f.preact, (float (*)[6][6][6])l_f.weight);
-	// fp_bias_f<<<64, 64>>>(l_f.preact, l_f.bias);
+	fp_preact_f<<<64, 64>>>((float (*)[6][6])l_s1.output, l_f.preact, (float (*)[6][6][6])l_f.weight);
+	fp_bias_f<<<64, 64>>>(l_f.preact, l_f.bias);
 	apply_sigmoid<<<64, 64>>>(l_f.preact, l_f.output, l_f.bytes);
 
 
@@ -303,7 +311,7 @@ void backward(){
 
 static void learn(){
 
-    printf("test 1\n");
+    printf("test 2\n");
     for(int i=0; i< train_cnt - 10; i++){
     //for(int i=0; i<10; i++){
     //     printf("label: %d \n", train_set[i].label);
@@ -318,7 +326,7 @@ static void learn(){
 
      }
 
-     for (int i = 0; i < 10; i++){
+     for (int i = train_cnt - 10; i < train_cnt; i++){
         l_f.bp_clear();
 		l_s1.bp_clear();
 		l_c1.bp_clear();
@@ -398,7 +406,7 @@ int main(){
         learn();
     }
     
-    //test();
+    test();
     printf("finish\n");
 
     return 0;
