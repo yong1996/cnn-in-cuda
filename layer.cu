@@ -147,6 +147,7 @@ __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][2
 			for (q = 0; q < K; q++)
 				if(h < H_out && w < W_out)
                     acc += input[h+p][w+q] * weight[m][p][q];
+					//acc = acc + X[n*(C*H_in*W_in) + c*(H_in*W_in) + (h+p)*(W_in) + (w+q)] * W[m*(C*K*K) + c*(K*K) + p*(K) + q];
 	}
 	__syncthreads();
 	if(h < H_out && w < W_out)
@@ -177,7 +178,7 @@ __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6
 			if(h < H_out && w < W_out)
 				// acc = acc + input[n*(M*H_in*W_in)+ m*(H_in*W_in) +
 				//               (pool_size * h + p)*(W_in) + (pool_size * w + q)] / (pool_size * pool_size);
-                acc = acc + input[m][h+p][w+q] * weight[0][h][q];
+                acc = acc + input[m][pool_size * h+p][pool_size * w+q] * weight[0][p][q];
 	}
 	__syncthreads();
 	if(h < H_out && w < W_out)

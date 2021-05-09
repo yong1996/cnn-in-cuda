@@ -184,11 +184,11 @@ void forward(const double data[28][28]){
 
 
     // for fully connected layer
-    // bz = ceil((float)10/TILE_WIDTH);
-    // dim3 gridDimfc(1, 10, 1);
-    // dim3 blockDimfc(6, 6, 6);
+    bz = ceil((float)10/TILE_WIDTH);
+    dim3 gridDimfc(1, 10, 1);
+    dim3 blockDimfc(6, 6, 6);
 
-    // FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10, 1, 10);
+    FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10, 1, 10);
     
 
     // int Output_width = 10;
@@ -203,8 +203,8 @@ void forward(const double data[28][28]){
 	// fp_bias_s1<<<64, 64>>>((float (*)[6][6])l_s1.preact, l_s1.bias);
 	// apply_sigmoid<<<64, 64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
 
-	fp_preact_f<<<64, 64>>>((float (*)[6][6])l_s1.output, l_f.preact, (float (*)[6][6][6])l_f.weight);
-	fp_bias_f<<<64, 64>>>(l_f.preact, l_f.bias);
+	// fp_preact_f<<<64, 64>>>((float (*)[6][6])l_s1.output, l_f.preact, (float (*)[6][6][6])l_f.weight);
+	// fp_bias_f<<<64, 64>>>(l_f.preact, l_f.bias);
 	apply_sigmoid<<<64, 64>>>(l_f.preact, l_f.output, l_f.bytes);
 
 
