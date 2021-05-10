@@ -207,18 +207,8 @@ static void learn(){
 
      }
 
-     printf("time on GPU: %.5f  \n", time_taken /  1000);
+     printf("time on GPU: %.5f seconds\n", time_taken /  1000);
 
-    //  for (int i = train_cnt - 10; i < train_cnt; i++){
-    //     l_f.bp_clear();
-	// 	l_s1.bp_clear();
-	// 	l_c1.bp_clear();
-        
-    //     forward(train_set[i].data);
-    //     makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
-    //     backward();
-
-    //  }
     
 }
 
@@ -261,10 +251,11 @@ static void test()
 int main(){
     int epoch = 5;
     printf("CNN CUDA version result: \n");
-    printf("epoch: %d  \n", epoch);
+    printf("epoch: %d  \n\n", epoch);
     loadData();
     
     for (int i = 0; i < epoch; i++){
+        printf("epoch: %d  \n", i + 1);
         learn();
         test();
     }
