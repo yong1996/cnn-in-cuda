@@ -179,6 +179,9 @@ __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6
 // input_height, input_width, weight_width, output_height, output_width
 //      1             6          10          1              10
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
+
+	// __shared__ float N_weight[10][6][6]][6];
+
 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
 	if(W_grid==0)
 		W_grid = 1;
@@ -188,6 +191,9 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 	int h = threadIdx.x;  // 6
 	int w = threadIdx.y;  // 6
 	int y = threadIdx.z;  // 6
+
+	// N_weight[m][h][w][y] = weight[m][h][w][y];
+	// __syncthreads();
 
 	float Pvalue = 0;
 	int o, p, q;
