@@ -4,7 +4,6 @@
 #define TILE_WIDTH 16
 
 
-
 // Layer constructor:
 Layer::Layer(int in_width, int in_height, int in_size): M(in_width), N(in_height), bytes(in_size){
 
@@ -146,7 +145,7 @@ __global__ void ConvLayerForward_Kernel_1(float output[6][24][24], float weight[
 
 
 // input_pointer, output_pointer, inputimage_height, inputimage_width, outputimage_channel, pool_size 
-__global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6][6][6], float weight[1][4][4], float bias[1] ,int H_in, int W_in, int M, int pool_size){
+__global__ void Pool2dForward_Kernel(float input[6][24][24], float output[6][6][6], float weight[1][4][4], float bias[1] ,int H_in, int W_in, int M, int pool_size){
 	int H_out = H_in/pool_size;
 	int W_out = W_in/pool_size;
 	int W_grid = ceilf((float)W_out/TILE_WIDTH);

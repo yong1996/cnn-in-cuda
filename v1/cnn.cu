@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 #include <math.h>
-
+#include <time.h>
 
 
 // //opencv for testing
@@ -176,6 +176,8 @@ static void learn(){
 
     float time_taken = 0.0;
 
+    clock_t t;
+	t = clock();
 
     for(int i=0; i< train_cnt; i++){
     //for(int i=0; i<10; i++){
@@ -193,7 +195,9 @@ static void learn(){
 
      printf("time on GPU: %.5f seconds\n", time_taken /  1000);
 
-    
+     t = clock() - t;
+     float cpu_time = (float)t/CLOCKS_PER_SEC;
+     printf("The CPU spend %.2f s.\n", cpu_time);
 }
 
 

@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 #include <math.h>
-
+#include <time.h>
 
 
 // //opencv for testing
@@ -24,8 +24,6 @@
 #include "mnist.h"
 #include "layer.h"
 #include "layer.cu"
-//#include "maxpooling.h"
-//#include "util.h"
 
 
 //define the kernel size
@@ -102,7 +100,7 @@ static float forward(const double data[28][28]){
     bz = ceil((float)6/TILE_WIDTH)*ceil((float)6/TILE_WIDTH);
     dim3 gridDimPool(1, 6, bz);
     dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
-    MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, (float (*)[4][4])l_s1.weight, l_s1.bias ,24, 24, 6, 4);
+    Pool2dForward_Kernel<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, (float (*)[4][4])l_s1.weight, l_s1.bias ,24, 24, 6, 4);
     apply_sigmoid <<<64,64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
 
     // for fully connected layer
@@ -176,6 +174,8 @@ static void learn(){
 
     float time_taken = 0.0;
 
+    clock_t t;
+	t = clock();
 
     for(int i=0; i< train_cnt; i++){
     //for(int i=0; i<10; i++){
@@ -189,11 +189,13 @@ static void learn(){
         makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
         time_taken += backward();
 
-     }
+    }
 
-     printf("time on GPU: %.5f seconds\n", time_taken /  1000);
+    printf("time on GPU: %.5f seconds\n", time_taken /  1000);
 
-    
+    t = clock() - t;
+	float cpu_time = (float)t/CLOCKS_PER_SEC;
+    printf("The CPU spend %.2f s.\n", cpu_time);
 }
 
 
