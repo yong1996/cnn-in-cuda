@@ -49,9 +49,7 @@ __global__ void apply_sigmoid(float *input, float *output, const int N);
 __global__ void backward_sigmoid(float* X, int size_in);
 __global__ void makeError(float *err, float *output, unsigned int Y, const int N);
 
-// __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M);
-__global__ void ConvLayerForward_Kernel_1(float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M);
-
+__global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M);
 __global__ void ConvLayerBackward_Kernel(
 	float input[28][28], 
 	float d_output[6][24][24], 
