@@ -13,8 +13,8 @@
 
 
 
-const static float dt = 1.0E-01f;
-const static float threshold = 1.0E-02f;
+const static float lr = 0.1f;
+const static float threshold = 0.01f;
 
 class Layer{
     public:
