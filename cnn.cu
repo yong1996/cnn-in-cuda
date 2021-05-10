@@ -75,6 +75,7 @@ static float forward(const double data[28][28]){
     //example for convLayer 1:
 
     l_input.setInput((float *)input);
+    cudaMemcpyToSymbol(conv_input, input, sizeof(float) * 28 * 28);
 
     //printf("input image: %f\n", &l_input.output[0][0]);
 
@@ -91,7 +92,10 @@ static float forward(const double data[28][28]){
     bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
     dim3 gridDim(1, 6, bz);
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
-    ConvLayerForward_Kernel_1<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 28, 28, 24, 5, 6);
+    // ConvLayerForward_Kernel_1<<<gridDim,blockDim>>>((float (*)[28])l_input.output, (float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 28, 28, 24, 5, 6);
+    //constant memory test
+    ConvLayerForward_Kernel_1<<<gridDim,blockDim>>>((float (*)[24][24])l_c1.preact, (float (*)[5][5])l_c1.weight, l_c1.bias, 1, 28, 28, 24, 5, 6);
+
     apply_sigmoid <<<64,64>>>(l_c1.preact, l_c1.output, l_c1.bytes);
 
     // for pooling layer example:

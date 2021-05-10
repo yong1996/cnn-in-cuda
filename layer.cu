@@ -4,6 +4,7 @@
 #define TILE_WIDTH 16
 
 
+
 // Layer constructor:
 Layer::Layer(int in_width, int in_height, int in_size): M(in_width), N(in_height), bytes(in_size){
 
@@ -112,8 +113,11 @@ __global__ void makeError(float *err, float *output, unsigned int Y, const int N
 
 #define TILE_WIDTH 16
 
+//__constant__ float conv_input[128 * 128];
 //input_pointer,  Output_pointer, W_pointer, Inputimage_channel, Inputimage_height, Inputimage_width , Outputimage_width, W_width_height, Outputimage_channel
-__global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M){
+// __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M){
+__global__ void ConvLayerForward_Kernel_1(float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M){
+
     int H_out = H_in - K + 1;
 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
 	if(W_grid==0)
@@ -129,8 +133,9 @@ __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][2
 		for (p = 0; p < K; p++) // loop over KxK filter
 			for (q = 0; q < K; q++)
 				if(x < H_out && y < W_out)
-                    acc += input[x+p][y+q] * weight[m][p][q];
-					//acc = acc + X[n*(C*H_in*W_in) + c*(H_in*W_in) + (hx+p)*(W_in) + (y+q)] * W[m*(C*K*K) + c*(K*K) + p*(K) + q];
+                    // acc += input[h+p][w+q] * weight[m][p][q];
+                    acc += conv_input[(x+p)*W_in + (y+q)] * weight[m][p][q];
+					//acc = acc + X[n*(C*H_in*W_in) + c*(H_in*W_in) + (h+p)*(W_in) + (w+q)] * W[m*(C*K*K) + c*(K*K) + p*(K) + q];
 	}
 	__syncthreads();
 	if(x < H_out && y < W_out)
