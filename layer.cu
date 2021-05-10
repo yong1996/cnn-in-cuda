@@ -78,6 +78,10 @@ void Layer::bp_clear()
 __device__ float sigmoid(float s){
     return 1/(1 + exp(-s));
 }
+__device__ float sigmoidPrime(float o){
+	
+	return o * (1 - o);
+}
 
 __global__ void apply_sigmoid(float *input, float *output, const int N){
     int pos = blockIdx.x * blockDim.x + threadIdx.x;
@@ -380,7 +384,7 @@ __global__ void bp_s1(
 	// int z = threadIdx.z;
 
 	float o = sigmoid(l_s1_preact[m][x][y]);
-	l_s1_d_preact[x][y] = l_s1_d_output[m][x][y] * o * (1 - o);
+	l_s1_d_preact[x][y] = l_s1_d_output[m][x][y] * sigmoidPrime(o);
 
 	l_s1_bias[0] += lr * l_s1_d_preact[x][y]/(6*6*6);
 
@@ -421,7 +425,7 @@ __global__ void bp_c1(
 	__syncthreads();
 
 	float o = sigmoid(l_c1_preact[m][x][y]);
-	l_c1_d_preact[x][y] = l_c1_d_output[m][x][y] * o * (1 - o);
+	l_c1_d_preact[x][y] = l_c1_d_output[m][x][y] * sigmoidPrime(o);
 
 	int i, j;
 	for(i=0; i<5; i++){
