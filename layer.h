@@ -108,6 +108,7 @@ __global__ void bp_c1(
 	float l_c1_d_preact[6][24][24],
 	float l_c1_d_output[6][24][24],
 	float l_c1_d_weight[6][5][5],
+	float l_c1_weight[6][5][5],
 	float l_input_output[28][28],
 	float l_c1_bias[6]);
 

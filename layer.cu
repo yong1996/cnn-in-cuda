@@ -87,17 +87,17 @@ __global__ void apply_sigmoid(float *input, float *output, const int N){
 	}
 }
 
-__global__ void backward_sigmoid(float* X, int size_in)
-{
-	int t = blockIdx.x * 1024 + threadIdx.x;
+// __global__ void backward_sigmoid(float* X, int size_in)
+// {
+// 	int t = blockIdx.x * 1024 + threadIdx.x;
 
-	if(t < size_in)
-	{
-		double tmp = 1 / (1 + exp(-X[t]));
-		tmp = (1-tmp)*tmp;
-		X[t] = X[t]*tmp;
-	}
-}
+// 	if(t < size_in)
+// 	{
+// 		double tmp = 1 / (1 + exp(-X[t]));
+// 		tmp = (1-tmp)*tmp;
+// 		X[t] = X[t]*tmp;
+// 	}
+// }
 
 
 __global__ void makeError(float *err, float *output, unsigned int Y, const int N)
@@ -109,18 +109,6 @@ __global__ void makeError(float *err, float *output, unsigned int Y, const int N
 		err[idx] = ((Y == idx ? 1.0f : 0.0f) - output[idx]);
 	}
 }
-
-__global__ void apply_grad(float *output, float *grad, const int N)
-{
-	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
-	const int size = blockDim.x * gridDim.x;
-
-	for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
-		output[idx] += dt * grad[idx];
-	}
-}
-
-
 
 #define TILE_WIDTH 16
 
@@ -348,6 +336,8 @@ __global__ void bp_f(
 	atomicAdd(&l_s1_d_output[h][w][y], l_f_weight[m][h][w][y] * l_f_d_preact[m]);
 	if(h==0 && w==0 && y==0 )
 		l_f_bias[m] += dt * l_f_d_preact[m];
+
+	l_f_weight[m][h][w][y] += dt * l_f_d_weight[m][h][w][y];
 }
 
 __global__ void bp_s1(
@@ -384,6 +374,9 @@ __global__ void bp_s1(
 			atomicAdd(&l_c1_d_output[m][h*4+i][w*4+j], l_s1_weight[0][i][j] * l_s1_d_preact[m][h][w]);
 		}
 	}
+
+	if(m==0 && h<4 && w <4)
+		l_s1_weight[0][h][w] += dt * l_s1_d_weight[0][h][w];
 }
 
 
@@ -392,6 +385,7 @@ __global__ void bp_c1(
 	float l_c1_d_preact[6][24][24],
 	float l_c1_d_output[6][24][24],
 	float l_c1_d_weight[6][5][5],
+	float l_c1_weight[6][5][5],
 	float l_input_output[28][28],
 	float l_c1_bias[6]
 
@@ -414,6 +408,9 @@ __global__ void bp_c1(
 	}
 
 	l_c1_bias[m] += dt * l_c1_d_preact[m][h][w] / (6*24*24);
+
+	if(m==6 && h<5 && w <5)
+		l_c1_weight[m][h][w] += dt * l_c1_d_weight[m][h][w];
 }
 
 

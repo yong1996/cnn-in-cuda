@@ -129,11 +129,6 @@ void backward(){
         (float (*)[6][6])l_s1.d_output,
         (float (*)[6][6])l_s1.d_preact);
 
-    // bp_weight_f<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
-	// bp_bias_f<<<64, 64>>>(l_f.bias, l_f.d_preact);
-
-	// bp_output_s1<<<64, 64>>>((float (*)[6][6])l_s1.d_output, (float (*)[6][6][6])l_f.weight, l_f.d_preact);
-
 // // pd_s
     dim3 gridDims(1, 6, 1);
     dim3 blockDims(6, 6, 1);
@@ -155,16 +150,9 @@ void backward(){
         (float (*)[24][24])l_c1.d_preact,
         (float (*)[24][24])l_c1.d_output,
         (float (*)[5][5])l_c1.d_weight,
+        (float (*)[5][5])l_c1.weight,
         (float (*)[28])l_input.output,
         l_c1.bias);
-
-
-
-    apply_grad<<<64, 64>>>(l_f.weight, l_f.d_weight, l_f.M * l_f.N);
-	apply_grad<<<64, 64>>>(l_s1.weight, l_s1.d_weight, l_s1.M * l_s1.N);
-	apply_grad<<<64, 64>>>(l_c1.weight, l_c1.d_weight, l_c1.M * l_c1.N);
-
-
 }
 
 static void learn(){
