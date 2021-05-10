@@ -72,29 +72,26 @@ __global__ void bp_f(
 	float l_f_bias[10],
 	float l_f_weight[10][6][6][6],
 	float l_s1_output[6][6][6],
-	float l_s1_d_output[6][6][6],
-	float l_s1_d_preact[6][6][6]);
+	float l_s1_d_output[6][6][6]
+);
 
 __global__ void bp_s1(
 	float l_s1_preact[6][6][6],
 	float l_s1_d_output[6][6][6],
-	float l_s1_d_preact[6][6][6],
 	float l_s1_d_weight[1][4][4],
 	float l_s1_weight[1][4][4],
 	float l_c1_output[6][24][24],
 	float l_c1_d_output[6][24][24],
-	float l_s1_bias[6]);
+	float l_s1_bias[6]
+);
 
 __global__ void bp_c1(
 	float l_c1_preact[6][24][24],
-	float l_c1_d_preact[6][24][24],
 	float l_c1_d_output[6][24][24],
-	float l_c1_d_weight[6][5][5],
 	float l_c1_weight[6][5][5],
 	float l_input_output[28][28],
-	float l_c1_bias[6]);
-
-
+	float l_c1_bias[6]
+);
 
 #endif
 

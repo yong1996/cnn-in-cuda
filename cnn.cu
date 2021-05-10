@@ -135,8 +135,7 @@ static float backward(){
         l_f.bias,
         (float (*)[6][6][6]) l_f.weight,
         (float (*)[6][6])l_s1.output,
-        (float (*)[6][6])l_s1.d_output,
-        (float (*)[6][6])l_s1.d_preact);
+        (float (*)[6][6])l_s1.d_output);
 
     
     dim3 gridDims(1, 6, 1);
@@ -144,7 +143,6 @@ static float backward(){
     bp_s1<<<gridDims, blockDims>>>(
         (float (*)[6][6])l_s1.preact,
         (float (*)[6][6])l_s1.d_output,
-        (float (*)[6][6])l_s1.d_preact,
         (float (*)[4][4])l_s1.d_weight,
         (float (*)[4][4])l_s1.weight,
         (float (*)[24][24])l_c1.output,
@@ -156,9 +154,7 @@ static float backward(){
     dim3 blockDimc(24, 24, 1);
     bp_c1<<<gridDimc, blockDimc>>>(
         (float (*)[24][24])l_c1.preact,
-        (float (*)[24][24])l_c1.d_preact,
         (float (*)[24][24])l_c1.d_output,
-        (float (*)[5][5])l_c1.d_weight,
         (float (*)[5][5])l_c1.weight,
         (float (*)[28])l_input.output,
         l_c1.bias);
