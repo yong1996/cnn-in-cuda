@@ -100,7 +100,7 @@ __global__ void apply_sigmoid(float *input, float *output, const int N){
 // }
 
 
-__global__ void makeError(float *err, float *output, unsigned int Y, const int N)
+__global__ void loss_func(float *err, float *output, unsigned int Y, const int N)
 {
 	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
 	const int size = blockDim.x * gridDim.x;
@@ -115,7 +115,7 @@ __global__ void makeError(float *err, float *output, unsigned int Y, const int N
 //__constant__ float conv_input[128 * 128];
 //input_pointer,  Output_pointer, W_pointer, Inputimage_channel, Inputimage_height, Inputimage_width , Outputimage_width, W_width_height, Outputimage_channel
 // __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M){
-__global__ void ConvLayerForward_Kernel_1(float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M){
+__global__ void ConvLayerForward_Kernel(float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M){
 
     int H_out = H_in - K + 1;
 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
@@ -145,7 +145,7 @@ __global__ void ConvLayerForward_Kernel_1(float output[6][24][24], float weight[
 
 
 // input_pointer, output_pointer, inputimage_height, inputimage_width, outputimage_channel, pool_size 
-__global__ void Pool2dForward_Kernel(float input[6][24][24], float output[6][6][6], float weight[1][4][4], float bias[1] ,int H_in, int W_in, int M, int pool_size){
+__global__ void PoolLayerForward_Kernel(float input[6][24][24], float output[6][6][6], float weight[1][4][4], float bias[1] ,int H_in, int W_in, int M, int pool_size){
 	int H_out = H_in/pool_size;
 	int W_out = W_in/pool_size;
 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
@@ -166,7 +166,7 @@ __global__ void Pool2dForward_Kernel(float input[6][24][24], float output[6][6][
 			if(x < H_out && y < W_out)
 				// acc = acc + input[l*(M*H_in*W_in)+ m*(H_in*W_in) +
 				//               (pool_size * x + p)*(W_in) + (pool_size * y + q)] / (pool_size * pool_size);
-                acc = acc + input[m][pool_size * x+p][pool_size * y+q] * weight[0][p][q];
+                acc += input[m][pool_size * x+p][pool_size * y+q] * weight[0][p][q];
 	}
 	__syncthreads();
 	if(x < H_out && y < W_out)
@@ -178,10 +178,6 @@ __global__ void Pool2dForward_Kernel(float input[6][24][24], float output[6][6][
 
 
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
-	int W_grid = ceilf((float)W_out/TILE_WIDTH);
-	if(W_grid==0)
-		W_grid = 1;
-
 	// int n = blockIdx.x;
 	int m = blockIdx.y;  // 10
 	int h = threadIdx.x;  // 6
@@ -337,7 +333,7 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 // }
 
 
-__global__ void bp_f(
+__global__ void FullyConLayerBackward_kernel(
 	float l_f_d_weight[10][6][6][6],
 	float l_f_d_preact[10],
 	float l_f_bias[10],
@@ -362,7 +358,7 @@ __global__ void bp_f(
 	l_f_weight[m][x][y][z] += lr * l_f_d_weight[m][x][y][z];
 }
 
-__global__ void bp_s1(
+__global__ void PoolLayerBackward_Kernel(
 	float l_s1_preact[6][6][6],
 	float l_s1_d_output[6][6][6],
 	float l_s1_d_weight[1][4][4],
@@ -399,7 +395,7 @@ __global__ void bp_s1(
 }
 
 
-__global__ void bp_c1(
+__global__ void ConvLayerBaackward_Kernel(
 	float l_c1_preact[6][24][24],
 	float l_c1_d_output[6][24][24],
 	float l_c1_weight[6][5][5],
