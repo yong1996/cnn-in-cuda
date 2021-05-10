@@ -49,7 +49,7 @@ static inline void loadData(){
 		&test_set, &test_cnt);
 }
 
-void forward(const double data[28][28]){
+static float forward(const double data[28][28]){
 
     // printf("run forward\n");
 
@@ -59,12 +59,10 @@ void forward(const double data[28][28]){
     for (int i = 0; i<28; i++){
         for (int j = 0; j<28; j++){
             input[i][j] = data[i][j];
-            // printf("%.2f ",data[i][j]);
-            // printf("%d ",(int)ceil(data[i][j]));
         }
-        // printf("\n");
     }
 
+    
 
     l_input.clear();
 	l_c1.clear();
@@ -79,6 +77,14 @@ void forward(const double data[28][28]){
     l_input.setInput((float *)input);
 
     //printf("input image: %f\n", &l_input.output[0][0]);
+
+
+    //timer
+	cudaEvent_t start, stop;
+	float time;
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start, 0);
     
 
     int bz;
@@ -114,9 +120,28 @@ void forward(const double data[28][28]){
 
 
 
+    //end timer:
+    cudaEventRecord(stop, 0);
+	cudaEventSynchronize(stop); // after cudaEventRecord
+	cudaEventElapsedTime(&time, start, stop);
+	cudaEventDestroy(start);
+	cudaEventDestroy(stop);
+
+    return time;
+
+
+
 }
 
-void backward(){
+static float backward(){
+
+
+    //timer
+	cudaEvent_t start2, stop2;
+	float time;
+	cudaEventCreate(&start2);
+	cudaEventCreate(&stop2);
+	cudaEventRecord(start2, 0);
     
     dim3 gridDimfc(1, 10, 1);
     dim3 blockDimfc(6, 6, 6);
@@ -129,12 +154,7 @@ void backward(){
         (float (*)[6][6])l_s1.d_output,
         (float (*)[6][6])l_s1.d_preact);
 
-    // bp_weight_f<<<64, 64>>>((float (*)[6][6][6])l_f.d_weight, l_f.d_preact, (float (*)[6][6])l_s1.output);
-	// bp_bias_f<<<64, 64>>>(l_f.bias, l_f.d_preact);
-
-	// bp_output_s1<<<64, 64>>>((float (*)[6][6])l_s1.d_output, (float (*)[6][6][6])l_f.weight, l_f.d_preact);
-
-// // pd_s
+    
     dim3 gridDims(1, 6, 1);
     dim3 blockDims(6, 6, 1);
     bp_s1<<<gridDims, blockDims>>>(
@@ -165,9 +185,22 @@ void backward(){
 	apply_grad<<<64, 64>>>(l_c1.weight, l_c1.d_weight, l_c1.M * l_c1.N);
 
 
+    //end timer:
+    cudaEventRecord(stop2, 0);
+	cudaEventSynchronize(stop2); // after cudaEventRecord
+	cudaEventElapsedTime(&time, start2, stop2);
+	cudaEventDestroy(start2);
+	cudaEventDestroy(stop2);
+
+    return time;
+
+
 }
 
 static void learn(){
+
+    float time_taken = 0.0;
+
 
     for(int i=0; i< train_cnt; i++){
     //for(int i=0; i<10; i++){
@@ -177,11 +210,13 @@ static void learn(){
 		l_s1.bp_clear();
 		l_c1.bp_clear();
         
-        forward(train_set[i].data);
+        time_taken += forward(train_set[i].data);
         makeError<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
-        backward();
+        time_taken += backward();
 
      }
+
+     printf("time on GPU: %.5f  \n", time_taken /  1000);
 
     //  for (int i = train_cnt - 10; i < train_cnt; i++){
     //     l_f.bp_clear();
@@ -233,12 +268,12 @@ static void test()
 
 
 int main(){
-    int epoch = 10;
+    int epoch = 5;
     printf("CNN CUDA version result: \n");
     printf("epoch: %d  \n", epoch);
     loadData();
     
-    for (int i = 0; i<epoch; i++){
+    for (int i = 0; i < epoch; i++){
         learn();
         test();
     }
