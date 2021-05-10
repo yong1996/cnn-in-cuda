@@ -178,6 +178,14 @@ static float backward(){
         (float (*)[5][5])l_c1.weight,
         (float (*)[28])l_input.output,
         l_c1.bias);
+
+    cudaEventRecord(stop2, 0);
+    cudaEventSynchronize(stop2); // after cudaEventRecord
+    cudaEventElapsedTime(&time, start2, stop2);
+    cudaEventDestroy(start2);
+    cudaEventDestroy(stop2);
+
+    return time;
 }
 
 static void learn(){
@@ -246,7 +254,7 @@ static void test()
 		}
 	}
 
-	printf("Error Rate: %.2lf%%\n", double(error) / double(test_cnt) * 100.0);
+	printf("Test Accuracy:: %.2lf%%\n", 100 - ( double(error) / double(test_cnt) * 100.0));
 }
 
 
