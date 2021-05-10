@@ -114,17 +114,17 @@ __global__ void makeError(float *err, float *output, unsigned int Y, const int N
 
 //input_pointer,  Output_pointer, W_pointer, Inputimage_channel, Inputimage_height, Inputimage_width , Outputimage_width, W_width_height, Outputimage_channel
 __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M){
-
     int H_out = H_in - K + 1;
-	int n, m, h, w, c, p, q;
 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
 	if(W_grid==0)
 		W_grid = 1;
-	n = blockIdx.x;
-	m = blockIdx.y;
-	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
-	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+	// int n = blockIdx.x;
+	int m = blockIdx.y;
+	int h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
+	int w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+
 	float acc = 0;
+	int c, p, q;
 	for (c = 0; c < C; c++) { // sum over all input channels
 		for (p = 0; p < K; p++) // loop over KxK filter
 			for (q = 0; q < K; q++)
@@ -142,7 +142,6 @@ __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][2
 
 // input_pointer, output_pointer, inputimage_height, inputimage_width, outputimage_channel, pool_size 
 __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6][6][6], float weight[1][4][4], float bias[1] ,int H_in, int W_in, int M, int pool_size){
-    int n, m, h, w, p, q;
 	int H_out = H_in/pool_size;
 	int W_out = W_in/pool_size;
 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
@@ -150,12 +149,14 @@ __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6
         W_grid = 1;
     }
 		
-	n = blockIdx.x;
-	m = blockIdx.y;
-	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
-	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+	// int n = blockIdx.x;
+	int m = blockIdx.y;
+	int h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
+	int w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
 	//h and w is not center point of calculating, it's upper left corner point of Input image
+	
 	float acc = 0;
+	int p, q;
 	for (p = 0; p < pool_size; p++) { // loop over KxK input samples
 		for (q = 0; q < pool_size; q++)
 			if(h < H_out && w < W_out)
@@ -178,18 +179,18 @@ __global__ void MaxPool2dForward_Kernel_1(float input[6][24][24], float output[6
 // input_height, input_width, weight_width, output_height, output_width
 //      1             6          10          1              10
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
-    int n, m, h, w, y, p, q, o;
 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
 	if(W_grid==0)
 		W_grid = 1;
 
-	n = blockIdx.x;
-	m = blockIdx.y;  // 10
-	h = threadIdx.x;  // 6
-	w = threadIdx.y;  // 6
-	y = threadIdx.z;  // 6
+	// int n = blockIdx.x;
+	int m = blockIdx.y;  // 10
+	int h = threadIdx.x;  // 6
+	int w = threadIdx.y;  // 6
+	int y = threadIdx.z;  // 6
 
 	float Pvalue = 0;
+	int o, p, q;
 	for (o = 0; o < 6; o++) {
 		for (p = 0; p < 6; p++) {
 			for (q = 0; q < 6; q++){
@@ -211,100 +212,94 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 
 
 
-__global__ void FullyConLayerBackward_kernel(
-	float lf_output[10],
-	float l_f_d_preact[10],
-	float ls1_preact[6][6][6],
-	float lf_weight[10][6][6][6],
-	float lf_d_weight[10][6][6][6],
-	float lf_bias[10]
-	) {
+// __global__ void FullyConLayerBackward_kernel(
+// 	float lf_output[10],
+// 	float l_f_d_preact[10],
+// 	float ls1_preact[6][6][6],
+// 	float lf_weight[10][6][6][6],
+// 	float lf_d_weight[10][6][6][6],
+// 	float lf_bias[10]
+// ) {
+// 	// int n = blockIdx.x;
+// 	int m = blockIdx.y;  // 10
+// 	int h = threadIdx.x;  // 6
+// 	int w = threadIdx.y;  // 6
+// 	int y = threadIdx.z;  // 6
 
-	int n, m, h, w, y, p, q, o;
+// 	l_f_d_preact[m] *= lf_output[m] * (1- lf_output[m]);
+// 	__syncthreads();
+// 	// ls1_d_preact[m] = l_f_d_preact[m] * lf_output[m] * (1- lf_output[m]);
 
-	n = blockIdx.x;
-	m = blockIdx.y;  // 10
-	h = threadIdx.x;  // 6
-	w = threadIdx.y;  // 6
-	y = threadIdx.z;  // 6
-
-	l_f_d_preact[m] *= lf_output[m] * (1- lf_output[m]);
-	__syncthreads();
-	// ls1_d_preact[m] = l_f_d_preact[m] * lf_output[m] * (1- lf_output[m]);
-
-	lf_bias[m] += dt + l_f_d_preact[m];
+// 	lf_bias[m] += dt + l_f_d_preact[m];
 	
+// 	lf_d_weight[m][h][w][y] = l_f_d_preact[m] * ls1_preact[h][w][y] ;
+// 	lf_d_weight[m][h][w][y] += lf_weight[m][h][w][y];
+// }
 
 
-	lf_d_weight[m][h][w][y] = l_f_d_preact[m] * ls1_preact[h][w][y] ;
-	lf_d_weight[m][h][w][y] += lf_weight[m][h][w][y];
-}
+// //input_pointer, Inputimage_height, Inputimage_width, output_pointer, Outputimage_channel, pool_size
+// __global__ void poolingLayer_backward_GPU(float input[6][24][24], int H_in, int W_in, float output[6][6][6], int M, int pool_size)
 
+// {
+// 	int H_out = H_in/pool_size;
+// 	int W_out = W_in/pool_size;
+// 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
+// 	if(W_grid==0)
+// 		W_grid = 1;
+// 	// int n = blockIdx.x;
+// 	int m = blockIdx.y;
+// 	int h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
+// 	int w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
 
-//input_pointer, Inputimage_height, Inputimage_width, output_pointer, Outputimage_channel, pool_size
-__global__ void poolingLayer_backward_GPU(float input[6][24][24], int H_in, int W_in, float output[6][6][6], int M, int pool_size)
+// 	//h and w is not center point of calculating, it's upper left corner point of Input image
+// 	float acc = 0;
+// 	for (int p = 0; p < pool_size; p++) { // loop over KxK input samples
+// 		for (int q = 0; q < pool_size; q++)
+// 			if(h < H_out && w < W_out)
+// 			input[m][h+p][w+q] = output[m][h][w] / (pool_size * pool_size);
+// 	}
+// 	__syncthreads();
 
-{
-	int n, m, h, w, p, q;
-	int H_out = H_in/pool_size;
-	int W_out = W_in/pool_size;
-	int W_grid = ceilf((float)W_out/TILE_WIDTH);
-	if(W_grid==0)
-		W_grid = 1;
-	n = blockIdx.x;
-	m = blockIdx.y;
-	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
-	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
-
-	//h and w is not center point of calculating, it's upper left corner point of Input image
-	float acc = 0;
-	for (p = 0; p < pool_size; p++) { // loop over KxK input samples
-		for (q = 0; q < pool_size; q++)
-			if(h < H_out && w < W_out)
-			input[m][h+p][w+q] = output[m][h][w] / (pool_size * pool_size);
-	}
-	__syncthreads();
-
-}
+// }
 
 
 
-__global__ void ConvLayerBackward_Kernel(
-	float input[28][28], 
-	float d_output[6][24][24], 
-	float preact[6][24][24], 
-	float d_preact[6][24][24], 
-	float d_weight[6][5][5], 
-	int C, int H_in, int W_in, int W_out, int K, int M) {
+// __global__ void ConvLayerBackward_Kernel(
+// 	float input[28][28], 
+// 	float d_output[6][24][24], 
+// 	float preact[6][24][24], 
+// 	float d_preact[6][24][24], 
+// 	float d_weight[6][5][5], 
+// 	int C, int H_in, int W_in, int W_out, int K, int M) {
 
-    int H_out = H_in - K + 1;
-	int n, m, h, w, c, p, q;
-	int W_grid = ceilf((float)W_out/TILE_WIDTH);
-	if(W_grid==0)
-		W_grid = 1;
-	n = blockIdx.x;
-	m = blockIdx.y;
-	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
-	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+//     int H_out = H_in - K + 1;
+// 	int n, m, h, w, c, p, q;
+// 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
+// 	if(W_grid==0)
+// 		W_grid = 1;
+// 	n = blockIdx.x;
+// 	m = blockIdx.y;
+// 	h = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
+// 	w = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
 
-	float d = 24.0f * 24.0f;
+// 	float d = 24.0f * 24.0f;
 
-	float o = sigmoid(preact[m][h][w]);
+// 	float o = sigmoid(preact[m][h][w]);
 	
-	// float dv = d_output[m][h][w] * o * (1 - o);
-	d_preact[m][h][w] = d_output[m][h][w] * o * (1 - o);
-	__syncthreads();
+// 	// float dv = d_output[m][h][w] * o * (1 - o);
+// 	d_preact[m][h][w] = d_output[m][h][w] * o * (1 - o);
+// 	__syncthreads();
 
-	for (c = 0; c < C; c++) {
-		for (p = 0; p < K; p++) {
-			for (q = 0; q < K; q++) {
-				if(h < H_out && w < W_out) {
-					d_weight[m][p][q] = d_preact[m][h][w] * input[28][28]/d;
-				}
-			}
-		}
-	}
-}
+// 	for (c = 0; c < C; c++) {
+// 		for (p = 0; p < K; p++) {
+// 			for (q = 0; q < K; q++) {
+// 				if(h < H_out && w < W_out) {
+// 					d_weight[m][p][q] = d_preact[m][h][w] * input[28][28]/d;
+// 				}
+// 			}
+// 		}
+// 	}
+// }
 
 
 
@@ -322,12 +317,11 @@ __global__ void bp_f(
 	float l_s1_d_output[6][6][6],
 	float l_s1_d_preact[6][6][6]
 ){
-	int n, m, h, w, y, p, q, o;
-	n = blockIdx.x;
-	m = blockIdx.y;  // 10
-	h = threadIdx.x;  // 6
-	w = threadIdx.y;  // 6
-	y = threadIdx.z;  // 6
+	// int n = blockIdx.x;
+	int m = blockIdx.y;  // 10
+	int h = threadIdx.x;  // 6
+	int w = threadIdx.y;  // 6
+	int y = threadIdx.z;  // 6
 
 
 	l_f_d_weight[m][h][w][y] = l_f_d_preact[m] * l_s1_output[h][w][y];
@@ -350,12 +344,11 @@ __global__ void bp_s1(
 	float l_c1_d_output[6][24][24],
 	float l_s1_bias[6]
 ){
-	int n, m, h, w, y, p, q;
-	n = blockIdx.x;
-	m = blockIdx.y;  // 6
-	h = threadIdx.x;  // 6
-	w = threadIdx.y;  // 6
-	y = threadIdx.z;  // -
+	// int n = blockIdx.x;
+	int m = blockIdx.y;  // 6
+	int h = threadIdx.x;  // 6
+	int w = threadIdx.y;  // 6
+	// int y = threadIdx.z;
 
 	float o = sigmoid(l_s1_preact[m][h][w]);
 	l_s1_d_preact[m][h][w] = l_s1_d_output[m][h][w] * o * (1 - o);
@@ -365,8 +358,9 @@ __global__ void bp_s1(
 
 	l_s1_bias[0] += dt * l_s1_d_preact[m][h][w]/(6*6*6);
 
-	for(int i=0; i<4; i++) {
-		for(int j=0; j<4; j++) {
+	int i,j;
+	for(i=0; i<4; i++) {
+		for(j=0; j<4; j++) {
 			// l_s1_d_weight[0][i][j] += l_s1_d_preact[m][h][w] * l_c1_output[m][h*4+i][w*4+j];
 			// l_c1_d_output[m][h*4+i][w*4+j] += l_s1_weight[0][i][j] * l_s1_d_preact[m][h][w];
 
@@ -390,19 +384,19 @@ __global__ void bp_c1(
 	float l_c1_bias[6]
 
 ){
-	int n, m, h, w, y, p, q;
-	n = blockIdx.x;
-	m = blockIdx.y;  // 6
-	h = threadIdx.x;  // 24
-	w = threadIdx.y;  // 24
-	y = threadIdx.z;  // -
+	// int n = blockIdx.x;
+	int m = blockIdx.y;  // 6
+	int h = threadIdx.x;  // 24
+	int w = threadIdx.y;  // 24
+	// int y = threadIdx.z;
 
 
 	float o = sigmoid(l_c1_preact[m][h][w]);
 	l_c1_d_preact[m][h][w] = l_c1_d_output[m][h][w] * o * (1 - o);
 
-	for(int i=0; i<5; i++){
-		for(int j=0; j<5; j++){
+	int i, j;
+	for(i=0; i<5; i++){
+		for(j=0; j<5; j++){
 			l_c1_d_weight[m][i][j] += l_c1_d_preact[m][h][w] * l_input_output[h + i][w + j] / (24*24);
 		}
 	}
@@ -412,9 +406,3 @@ __global__ void bp_c1(
 	if(m==6 && h<5 && w <5)
 		l_c1_weight[m][h][w] += dt * l_c1_d_weight[m][h][w];
 }
-
-
-// =================================
-
-// */
-

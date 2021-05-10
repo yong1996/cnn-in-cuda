@@ -88,15 +88,6 @@ static float forward(const double data[28][28]){
     
 
     int bz;
-
-    int W_grid, H_grid;
-    int W_out = 24, H_out = 24;
-    //int M = 6;  // The first (x) dimension in the grid maps to the M output feature maps
-    W_grid = ceilf(W_out/TILE_WIDTH); 	// number of horizontal tiles per output map
-    if (W_grid == 0) W_grid = 1;
-    H_grid = H_out/TILE_WIDTH; 	// number of vertical tiles per output map
-    //int Y = H_grid * W_grid; //The second (y) dimension in the grid maps to the tiles in the output feature maps
-    //int C = 1, K = 5;
     bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
     dim3 gridDim(1, 6, bz);
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
@@ -107,7 +98,6 @@ static float forward(const double data[28][28]){
     bz = ceil((float)6/TILE_WIDTH)*ceil((float)6/TILE_WIDTH);
     dim3 gridDimPool(1, 6, bz);
     dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
-    //MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, 24, 24, 6, 4);
     MaxPool2dForward_Kernel_1<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, (float (*)[4][4])l_s1.weight, l_s1.bias ,24, 24, 6, 4);
     apply_sigmoid <<<64,64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
 
@@ -119,7 +109,6 @@ static float forward(const double data[28][28]){
 	apply_sigmoid<<<64, 64>>>(l_f.preact, l_f.output, l_f.bytes);
 
 
-
     //end timer:
     cudaEventRecord(stop, 0);
 	cudaEventSynchronize(stop); // after cudaEventRecord
@@ -128,14 +117,9 @@ static float forward(const double data[28][28]){
 	cudaEventDestroy(stop);
 
     return time;
-
-
-
 }
 
 static float backward(){
-
-
     //timer
 	cudaEvent_t start2, stop2;
 	float time;
@@ -251,7 +235,7 @@ static void test()
 int main(){
     int epoch = 5;
     printf("CNN CUDA version result: \n");
-    printf("epoch: %d  \n\n", epoch);
+    printf("Number of epoch: %d  \n\n", epoch);
     loadData();
     
     for (int i = 0; i < epoch; i++){
