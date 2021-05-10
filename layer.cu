@@ -57,9 +57,6 @@ Layer::~Layer(){
 
 void Layer:: setInput(float *data){
     cudaMemcpy(output, data, sizeof(float)*bytes, cudaMemcpyHostToDevice);
-
-	// constant memory
-	cudaMemcpyToSymbol(conv_input, data, bytes);
 }
 
 // Reset GPU memory between iterations
@@ -116,6 +113,7 @@ __global__ void makeError(float *err, float *output, unsigned int Y, const int N
 
 #define TILE_WIDTH 16
 
+//__constant__ float conv_input[128 * 128];
 //input_pointer,  Output_pointer, W_pointer, Inputimage_channel, Inputimage_height, Inputimage_width , Outputimage_width, W_width_height, Outputimage_channel
 // __global__ void ConvLayerForward_Kernel_1(float input[28][28], float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M){
 __global__ void ConvLayerForward_Kernel_1(float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M){
@@ -134,9 +132,9 @@ __global__ void ConvLayerForward_Kernel_1(float output[6][24][24], float weight[
 	for (c = 0; c < C; c++) { // sum over all input channels
 		for (p = 0; p < K; p++) // loop over KxK filter
 			for (q = 0; q < K; q++)
-				if(h < H_out && w < W_out)
+				if(x < H_out && y < W_out)
                     // acc += input[h+p][w+q] * weight[m][p][q];
-                    acc += conv_input[(x+p) * 28 + y + q] * weight[m][p][q];
+                    acc += conv_input[(x+p)*W_in + (y+q)] * weight[m][p][q];
 					//acc = acc + X[n*(C*H_in*W_in) + c*(H_in*W_in) + (h+p)*(W_in) + (w+q)] * W[m*(C*K*K) + c*(K*K) + p*(K) + q];
 	}
 	__syncthreads();

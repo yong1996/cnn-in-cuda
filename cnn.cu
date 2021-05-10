@@ -75,6 +75,7 @@ static float forward(const double data[28][28]){
     //example for convLayer 1:
 
     l_input.setInput((float *)input);
+    cudaMemcpyToSymbol(conv_input, input, sizeof(float) * 28 * 28);
 
     //printf("input image: %f\n", &l_input.output[0][0]);
 
