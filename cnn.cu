@@ -175,26 +175,9 @@ static float backward(){
         (float (*)[24][24])l_c1.d_preact,
         (float (*)[24][24])l_c1.d_output,
         (float (*)[5][5])l_c1.d_weight,
+        (float (*)[5][5])l_c1.weight,
         (float (*)[28])l_input.output,
         l_c1.bias);
-
-
-
-    apply_grad<<<64, 64>>>(l_f.weight, l_f.d_weight, l_f.M * l_f.N);
-	apply_grad<<<64, 64>>>(l_s1.weight, l_s1.d_weight, l_s1.M * l_s1.N);
-	apply_grad<<<64, 64>>>(l_c1.weight, l_c1.d_weight, l_c1.M * l_c1.N);
-
-
-    //end timer:
-    cudaEventRecord(stop2, 0);
-	cudaEventSynchronize(stop2); // after cudaEventRecord
-	cudaEventElapsedTime(&time, start2, stop2);
-	cudaEventDestroy(start2);
-	cudaEventDestroy(stop2);
-
-    return time;
-
-
 }
 
 static void learn(){
