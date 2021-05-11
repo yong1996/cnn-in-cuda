@@ -96,9 +96,8 @@ static float forward(const double data[28][28]){
     apply_sigmoid <<<64,64>>>(l_c1.preact, l_c1.output, l_c1.bytes);
 
     // for pooling layer example:
-    bz = ceil((float)6/TILE_WIDTH)*ceil((float)6/TILE_WIDTH);
-    dim3 gridDimPool(1, 6, bz);
-    dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
+    dim3 gridDimPool(1, 1, 1);
+    dim3 blockDimPool(6, 6, 6);
     PoolLayerForward_Kernel<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_p.preact, (float (*)[4][4])l_p.weight, l_p.bias ,24, 24, 6, 4);
     apply_sigmoid <<<64,64>>>(l_p.preact, l_p.output, l_p.bytes);
 

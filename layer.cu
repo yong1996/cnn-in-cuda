@@ -189,30 +189,38 @@ __global__ void ConvLayerBackward_Kernel(
 __global__ void PoolLayerForward_Kernel(float input[6][24][24], float output[6][6][6], float weight[1][4][4], float bias[1] ,int H_in, int W_in, int M, int pool_size){
 	int H_out = H_in/pool_size;
 	int W_out = W_in/pool_size;
-	int W_grid = ceilf((float)W_out/TILE_WIDTH);
-	if(W_grid==0){
-        W_grid = 1;
-    }
+	// int W_grid = ceilf((float)W_out/TILE_WIDTH);
+	// if(W_grid==0){
+    //     W_grid = 1;
+    // }
 		
-	// int l = blockIdx.x;
-	int m = blockIdx.y;
-	int x = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
-	int y = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+	// // int l = blockIdx.x;
+	// int m = blockIdx.y;
+	// int x = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
+	// int y = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
 	//h and w is not center point of calculating, it's upper left corner point of Input image
+	
+
+	// int l = blockIdx.x;
+	// int m = blockIdx.y;
+	int x = threadIdx.x;  // 6
+	int y = threadIdx.y;  // 6
+	int z = threadIdx.z;  // 6
+
 	
 	float acc = 0;
 	int p, q;
 	for (p = 0; p < pool_size; p++) { // loop over KxK input samples
 		for (q = 0; q < pool_size; q++)
-			if(x < H_out && y < W_out)
-				// acc = acc + input[l*(M*H_in*W_in)+ m*(H_in*W_in) +
-				//               (pool_size * x + p)*(W_in) + (pool_size * y + q)] / (pool_size * pool_size);
-                acc += input[m][pool_size * x+p][pool_size * y+q] * weight[0][p][q];
+			if(y < H_out && z < W_out)
+				// acc = acc + input[l*(M*H_in*W_in)+ x*(H_in*W_in) +
+				//               (pool_size * y + p)*(W_in) + (pool_size * z + q)] / (pool_size * pool_size);
+                acc += input[x][pool_size * y+p][pool_size * z+q] * weight[0][p][q];
 	}
 	__syncthreads();
-	if(x < H_out && y < W_out) {
-		// Y[n*(M*H_out*W_out)+ m*(H_out*W_out) + h*(W_out) + w] = acc;
-		output[m][x][y] = acc + bias[0];
+	if(y < H_out && z < W_out) {
+		// Y[n*(M*H_out*W_out)+ x*(H_out*W_out) + h*(W_out) + w] = acc;
+		output[x][y][z] = acc + bias[0];
 	}
 }
 
