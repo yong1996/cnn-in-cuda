@@ -217,39 +217,40 @@ __global__ void PoolLayerForward_Kernel(float input[6][24][24], float output[6][
 }
 
 __global__ void PoolLayerBackward_Kernel(
-	float l_s1_preact[6][6][6],
-	float l_s1_d_output[6][6][6],
-	float l_s1_d_weight[1][4][4],
-	float l_s1_weight[1][4][4],
+	float l_p_preact[6][6][6],
+	float l_p_d_output[6][6][6],
+	float l_p_d_weight[1][4][4],
+	float l_p_weight[1][4][4],
 	float l_c1_output[6][24][24],
 	float l_c1_d_output[6][24][24],
-	float l_s1_bias[6]
+	float l_p_bias[6]
 ){
-	__shared__ float l_s1_d_preact[6][6];
+	__shared__ float l_p_d_preact[6][6];
 	// int l = blockIdx.x;
 	int m = blockIdx.y;  // 6
 	int x = threadIdx.x;  // 6
 	int y = threadIdx.y;  // 6
 	// int z = threadIdx.z;
 
-	// float o = sigmoid(l_s1_preact[m][x][y]);
-	l_s1_d_preact[x][y] = l_s1_d_output[m][x][y] * sigmoidPrime(l_s1_preact[m][x][y]);
+	// float o = sigmoid(l_p_preact[m][x][y]);
+	l_p_d_preact[x][y] = l_p_d_output[m][x][y] * sigmoidPrime(l_p_preact[m][x][y]);
 
-	l_s1_bias[0] += lr * l_s1_d_preact[x][y]/(6*6*6);
+	l_p_bias[0] += lr * l_p_d_preact[x][y]/(6*6*6);
 
 	int i,j;
 	for(i=0; i<4; i++) {
 		for(j=0; j<4; j++) {
-			// l_s1_d_weight[0][i][j] += l_s1_d_preact[m][x][y] * l_c1_output[m][h*4+i][w*4+j];
-			// l_c1_d_output[m][h*4+i][w*4+j] += l_s1_weight[0][i][j] * l_s1_d_preact[m][x][y];
+			// l_p_d_weight[0][i][j] += l_p_d_preact[m][x][y] * l_c1_output[m][h*4+i][w*4+j];
+			// l_c1_d_output[m][h*4+i][w*4+j] += l_p_weight[0][i][j] * l_p_d_preact[m][x][y];
 
-			atomicAdd(&l_s1_d_weight[0][i][j], l_s1_d_preact[x][y] * l_c1_output[m][x*4+i][y*4+j]);
-			atomicAdd(&l_c1_d_output[m][x*4+i][y*4+j], l_s1_weight[0][i][j] * l_s1_d_preact[x][y]);
+			atomicAdd(&l_p_d_weight[0][i][j], l_p_d_preact[x][y] * l_c1_output[m][x*4+i][y*4+j]);
+			atomicAdd(&l_c1_d_output[m][x*4+i][y*4+j], l_p_weight[0][i][j] * l_p_d_preact[x][y]);
 		}
 	}
+	__syncthreads();
 
 	if(m==0 && x<4 && y<4)
-		l_s1_weight[0][x][y] += lr * l_s1_d_weight[0][x][y];
+		l_p_weight[0][x][y] += lr * l_p_d_weight[0][x][y];
 }
 
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
@@ -282,8 +283,8 @@ __global__ void FullyConLayerBackward_kernel(
 	float l_f_d_preact[10],
 	float l_f_bias[10],
 	float l_f_weight[10][6][6][6],
-	float l_s1_output[6][6][6],
-	float l_s1_d_output[6][6][6]
+	float l_p_output[6][6][6],
+	float l_p_d_output[6][6][6]
 ){
 	// int l = blockIdx.x;
 	int m = blockIdx.y;  // 10
@@ -292,10 +293,10 @@ __global__ void FullyConLayerBackward_kernel(
 	int z = threadIdx.z;  // 6
 
 
-	l_f_d_weight[m][x][y][z] = l_f_d_preact[m] * l_s1_output[x][y][z];
-	// l_s1_d_output[x][y][z] += l_f_weight[m][x][y][z] * l_f_d_preact[m];
+	l_f_d_weight[m][x][y][z] = l_f_d_preact[m] * l_p_output[x][y][z];
+	// l_p_d_output[x][y][z] += l_f_weight[m][x][y][z] * l_f_d_preact[m];
 
-	atomicAdd(&l_s1_d_output[x][y][z], l_f_weight[m][x][y][z] * l_f_d_preact[m]);
+	atomicAdd(&l_p_d_output[x][y][z], l_f_weight[m][x][y][z] * l_f_d_preact[m]);
 	if(x==0 && y==0 && z==0 )
 		l_f_bias[m] += lr * l_f_d_preact[m];
 

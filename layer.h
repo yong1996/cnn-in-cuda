@@ -63,13 +63,13 @@ __global__ void ConvLayerBaackward_Kernel(
 //pooling
 __global__ void PoolLayerForward_Kernel(float input[6][24][24], float output[6][6][6], float weight[1][4][4], float bias[1] ,int H_in, int W_in, int M, int pool_size);
 __global__ void PoolLayerBackward_Kernel(
-	float l_s1_preact[6][6][6],
-	float l_s1_d_output[6][6][6],
-	float l_s1_d_weight[1][4][4],
-	float l_s1_weight[1][4][4],
+	float l_p_preact[6][6][6],
+	float l_p_d_output[6][6][6],
+	float l_p_d_weight[1][4][4],
+	float l_p_weight[1][4][4],
 	float l_c1_output[6][24][24],
 	float l_c1_d_output[6][24][24],
-	float l_s1_bias[6]
+	float l_p_bias[6]
 );
 
 // FullyConnect
@@ -80,8 +80,8 @@ __global__ void FullyConLayerBackward_kernel(
 	float l_f_d_preact[10],
 	float l_f_bias[10],
 	float l_f_weight[10][6][6][6],
-	float l_s1_output[6][6][6],
-	float l_s1_d_output[6][6][6]
+	float l_p_output[6][6][6],
+	float l_p_d_output[6][6][6]
 );
 
 #endif

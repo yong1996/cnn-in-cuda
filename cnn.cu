@@ -33,7 +33,7 @@
 // set Layer
 static Layer l_input = Layer(0, 0, 28*28);
 static Layer l_c1 = Layer(5*5, 6, 24*24*6);
-static Layer l_s1 = Layer(4*4, 1, 6*6*6);
+static Layer l_p = Layer(4*4, 1, 6*6*6);
 static Layer l_f = Layer(6*6*6, 10, 10);
 
 static mnist_data *train_set, *test_set;
@@ -64,7 +64,7 @@ static float forward(const double data[28][28]){
 
     l_input.clear();
 	l_c1.clear();
-	l_s1.clear();
+	l_p.clear();
 	l_f.clear();
 
     // printf("**************************************\n");
@@ -99,14 +99,14 @@ static float forward(const double data[28][28]){
     bz = ceil((float)6/TILE_WIDTH)*ceil((float)6/TILE_WIDTH);
     dim3 gridDimPool(1, 6, bz);
     dim3 blockDimPool(TILE_WIDTH, TILE_WIDTH, 1);
-    PoolLayerForward_Kernel<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_s1.preact, (float (*)[4][4])l_s1.weight, l_s1.bias ,24, 24, 6, 4);
-    apply_sigmoid <<<64,64>>>(l_s1.preact, l_s1.output, l_s1.bytes);
+    PoolLayerForward_Kernel<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_p.preact, (float (*)[4][4])l_p.weight, l_p.bias ,24, 24, 6, 4);
+    apply_sigmoid <<<64,64>>>(l_p.preact, l_p.output, l_p.bytes);
 
     // for fully connected layer
     bz = ceil((float)10/TILE_WIDTH);
     dim3 gridDimfc(1, 10, 1);
     dim3 blockDimfc(6, 6, 6);
-    FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_s1.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10, 1, 10);
+    FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_p.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10, 1, 10);
 	apply_sigmoid<<<64, 64>>>(l_f.preact, l_f.output, l_f.bytes);
 
 
@@ -135,20 +135,20 @@ static float backward(){
         l_f.d_preact,
         l_f.bias,
         (float (*)[6][6][6]) l_f.weight,
-        (float (*)[6][6])l_s1.output,
-        (float (*)[6][6])l_s1.d_output);
+        (float (*)[6][6])l_p.output,
+        (float (*)[6][6])l_p.d_output);
 
     
     dim3 gridDims(1, 6, 1);
     dim3 blockDims(6, 6, 1);
     PoolLayerBackward_Kernel<<<gridDims, blockDims>>>(
-        (float (*)[6][6])l_s1.preact,
-        (float (*)[6][6])l_s1.d_output,
-        (float (*)[4][4])l_s1.d_weight,
-        (float (*)[4][4])l_s1.weight,
+        (float (*)[6][6])l_p.preact,
+        (float (*)[6][6])l_p.d_output,
+        (float (*)[4][4])l_p.d_weight,
+        (float (*)[4][4])l_p.weight,
         (float (*)[24][24])l_c1.output,
         (float (*)[24][24])l_c1.d_output,
-        l_s1.bias);
+        l_p.bias);
 
     
     dim3 gridDimc(1, 6, 1);
@@ -181,7 +181,7 @@ static void learn(){
     //     printf("label: %d \n", train_set[i].label);
 
         l_f.bp_clear();
-		l_s1.bp_clear();
+		l_p.bp_clear();
 		l_c1.bp_clear();
         
         time_taken += forward(train_set[i].data);
@@ -234,7 +234,7 @@ static void test()
 
 
 int main(){
-    int epoch = 5;
+    int epoch = 50;
     printf("CNN CUDA version result: \n");
     printf("Number of epoch: %d  \n\n", epoch);
     loadData();
