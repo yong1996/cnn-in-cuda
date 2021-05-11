@@ -151,7 +151,7 @@ static float backward(){
     
     dim3 gridDimc(1, 6, 1);
     dim3 blockDimc(24, 24, 1);
-    ConvLayerBaackward_Kernel<<<gridDimc, blockDimc>>>(
+    ConvLayerBackward_Kernel<<<gridDimc, blockDimc>>>(
         (float (*)[24][24])l_c1.preact,
         (float (*)[24][24])l_c1.d_output,
         (float (*)[5][5])l_c1.weight,

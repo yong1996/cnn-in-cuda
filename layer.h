@@ -52,7 +52,7 @@ __global__ void loss_func(float *err, float *output, const int Y, const int N);
 
 __constant__ float conv_input[28 *28];
 __global__ void ConvLayerForward_Kernel(float output[6][24][24], float weight[6][5][5], float bias[6], int C, int H_in, int W_in, int W_out, int K, int M);
-__global__ void ConvLayerBaackward_Kernel(
+__global__ void ConvLayerBackward_Kernel(
 	float l_c1_preact[6][24][24],
 	float l_c1_d_output[6][24][24],
 	float l_c1_weight[6][5][5],

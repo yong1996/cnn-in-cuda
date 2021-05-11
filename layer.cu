@@ -149,7 +149,7 @@ __global__ void ConvLayerForward_Kernel(float output[6][24][24], float weight[6]
     }
 }
 
-__global__ void ConvLayerBaackward_Kernel(
+__global__ void ConvLayerBackward_Kernel(
 	float l_c1_preact[6][24][24],
 	float l_c1_d_output[6][24][24],
 	float l_c1_weight[6][5][5],
