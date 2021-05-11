@@ -122,11 +122,11 @@ static float forward(const double data[28][28]){
 
 static float backward(){
     //timer
-	cudaEvent_t start2, stop2;
+	cudaEvent_t start, stop;
 	float time;
-	cudaEventCreate(&start2);
-	cudaEventCreate(&stop2);
-	cudaEventRecord(start2, 0);
+	cudaEventCreate(&start);
+	cudaEventCreate(&stop);
+	cudaEventRecord(start, 0);
     
     dim3 gridDimfc(1, 10, 1);
     dim3 blockDimfc(6, 6, 6);
@@ -160,11 +160,11 @@ static float backward(){
         (float (*)[28])l_input.output,
         l_c1.bias);
 
-    cudaEventRecord(stop2, 0);
-    cudaEventSynchronize(stop2); // after cudaEventRecord
-    cudaEventElapsedTime(&time, start2, stop2);
-    cudaEventDestroy(start2);
-    cudaEventDestroy(stop2);
+    cudaEventRecord(stop, 0);
+    cudaEventSynchronize(stop); // after cudaEventRecord
+    cudaEventElapsedTime(&time, start, stop);
+    cudaEventDestroy(start);
+    cudaEventDestroy(stop);
 
     return time;
 }
@@ -194,7 +194,7 @@ static void learn(){
 
     t = clock() - t;
 	float cpu_time = (float)t/CLOCKS_PER_SEC;
-    printf("The CPU spend %.2f s.\n", cpu_time);
+    printf("The CPU spend %.2f seconds \n", cpu_time);
 }
 
 
@@ -229,7 +229,7 @@ static void test()
 		}
 	}
 
-	printf("Test Accuracy:: %.2lf%%\n", 100 - ( double(error) / double(test_cnt) * 100.0));
+	printf("Test Accuracy:: %.2f%%\n", 100 - ( double(error) / double(test_cnt) * 100.0));
 }
 
 

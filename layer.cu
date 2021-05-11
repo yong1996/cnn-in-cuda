@@ -77,8 +77,9 @@ void Layer::bp_clear()
 __device__ float sigmoid(float s){
     return 1/(1 + exp(-s));
 }
-__device__ float sigmoidPrime(float o){
-	
+
+__device__ float sigmoidPrime(float s){
+	float o = sigmoid(s);
 	return o * (1 - o);
 }
 
@@ -147,6 +148,41 @@ __global__ void ConvLayerForward_Kernel(float output[6][24][24], float weight[6]
     }
 }
 
+__global__ void ConvLayerBaackward_Kernel(
+	float l_c1_preact[6][24][24],
+	float l_c1_d_output[6][24][24],
+	float l_c1_weight[6][5][5],
+	float l_input_output[28][28],
+	float l_c1_bias[6]
+){
+	__shared__ float l_c1_d_preact[24][24];
+	__shared__ float l_c1_d_weight[5][5];
+
+	// int l = blockIdx.x;
+	int m = blockIdx.y;  // 6
+	int x = threadIdx.x;  // 24
+	int y = threadIdx.y;  // 24
+	// int z = threadIdx.z;
+
+	if(x<5 && y <5)
+		l_c1_d_weight[x][y] = 0;
+	__syncthreads();
+
+	// float o = sigmoid(l_c1_preact[m][x][y]);
+	l_c1_d_preact[x][y] = l_c1_d_output[m][x][y] * sigmoidPrime(l_c1_preact[m][x][y]);
+
+	int i, j;
+	for(i=0; i<5; i++){
+		for(j=0; j<5; j++){
+			l_c1_d_weight[i][j] += l_c1_d_preact[x][y] * l_input_output[x + i][y + j] / (24*24);
+		}
+	}
+
+	l_c1_bias[m] += lr * l_c1_d_preact[x][y] / (6*24*24);
+
+	if(m==6 && x<5 && y<5)
+		l_c1_weight[m][x][y] += lr * l_c1_d_weight[x][y];
+}
 
 // input_pointer, output_pointer, inputimage_height, inputimage_width, outputimage_channel, pool_size 
 __global__ void PoolLayerForward_Kernel(float input[6][24][24], float output[6][6][6], float weight[1][4][4], float bias[1] ,int H_in, int W_in, int M, int pool_size){
@@ -180,6 +216,41 @@ __global__ void PoolLayerForward_Kernel(float input[6][24][24], float output[6][
 	}
 }
 
+__global__ void PoolLayerBackward_Kernel(
+	float l_s1_preact[6][6][6],
+	float l_s1_d_output[6][6][6],
+	float l_s1_d_weight[1][4][4],
+	float l_s1_weight[1][4][4],
+	float l_c1_output[6][24][24],
+	float l_c1_d_output[6][24][24],
+	float l_s1_bias[6]
+){
+	__shared__ float l_s1_d_preact[6][6];
+	// int l = blockIdx.x;
+	int m = blockIdx.y;  // 6
+	int x = threadIdx.x;  // 6
+	int y = threadIdx.y;  // 6
+	// int z = threadIdx.z;
+
+	// float o = sigmoid(l_s1_preact[m][x][y]);
+	l_s1_d_preact[x][y] = l_s1_d_output[m][x][y] * sigmoidPrime(l_s1_preact[m][x][y]);
+
+	l_s1_bias[0] += lr * l_s1_d_preact[x][y]/(6*6*6);
+
+	int i,j;
+	for(i=0; i<4; i++) {
+		for(j=0; j<4; j++) {
+			// l_s1_d_weight[0][i][j] += l_s1_d_preact[m][x][y] * l_c1_output[m][h*4+i][w*4+j];
+			// l_c1_d_output[m][h*4+i][w*4+j] += l_s1_weight[0][i][j] * l_s1_d_preact[m][x][y];
+
+			atomicAdd(&l_s1_d_weight[0][i][j], l_s1_d_preact[x][y] * l_c1_output[m][x*4+i][y*4+j]);
+			atomicAdd(&l_c1_d_output[m][x*4+i][y*4+j], l_s1_weight[0][i][j] * l_s1_d_preact[x][y]);
+		}
+	}
+
+	if(m==0 && x<4 && y<4)
+		l_s1_weight[0][x][y] += lr * l_s1_d_weight[0][x][y];
+}
 
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
 	// int n = blockIdx.x;
@@ -204,6 +275,31 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 
     if(m < W_out && h < 6 && w < 6 && y < 6)
 		output[m] = Pvalue + bias[m]; // Output
+}
+
+__global__ void FullyConLayerBackward_kernel(
+	float l_f_d_weight[10][6][6][6],
+	float l_f_d_preact[10],
+	float l_f_bias[10],
+	float l_f_weight[10][6][6][6],
+	float l_s1_output[6][6][6],
+	float l_s1_d_output[6][6][6]
+){
+	// int l = blockIdx.x;
+	int m = blockIdx.y;  // 10
+	int x = threadIdx.x;  // 6
+	int y = threadIdx.y;  // 6
+	int z = threadIdx.z;  // 6
+
+
+	l_f_d_weight[m][x][y][z] = l_f_d_preact[m] * l_s1_output[x][y][z];
+	// l_s1_d_output[x][y][z] += l_f_weight[m][x][y][z] * l_f_d_preact[m];
+
+	atomicAdd(&l_s1_d_output[x][y][z], l_f_weight[m][x][y][z] * l_f_d_preact[m]);
+	if(x==0 && y==0 && z==0 )
+		l_f_bias[m] += lr * l_f_d_preact[m];
+
+	l_f_weight[m][x][y][z] += lr * l_f_d_weight[m][x][y][z];
 }
 
 // input_height, input_width, weight_width, output_height, output_width
@@ -337,100 +433,5 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 // }
 
 
-__global__ void FullyConLayerBackward_kernel(
-	float l_f_d_weight[10][6][6][6],
-	float l_f_d_preact[10],
-	float l_f_bias[10],
-	float l_f_weight[10][6][6][6],
-	float l_s1_output[6][6][6],
-	float l_s1_d_output[6][6][6]
-){
-	// int l = blockIdx.x;
-	int m = blockIdx.y;  // 10
-	int x = threadIdx.x;  // 6
-	int y = threadIdx.y;  // 6
-	int z = threadIdx.z;  // 6
 
 
-	l_f_d_weight[m][x][y][z] = l_f_d_preact[m] * l_s1_output[x][y][z];
-	// l_s1_d_output[x][y][z] += l_f_weight[m][x][y][z] * l_f_d_preact[m];
-
-	atomicAdd(&l_s1_d_output[x][y][z], l_f_weight[m][x][y][z] * l_f_d_preact[m]);
-	if(x==0 && y==0 && z==0 )
-		l_f_bias[m] += lr * l_f_d_preact[m];
-
-	l_f_weight[m][x][y][z] += lr * l_f_d_weight[m][x][y][z];
-}
-
-__global__ void PoolLayerBackward_Kernel(
-	float l_s1_preact[6][6][6],
-	float l_s1_d_output[6][6][6],
-	float l_s1_d_weight[1][4][4],
-	float l_s1_weight[1][4][4],
-	float l_c1_output[6][24][24],
-	float l_c1_d_output[6][24][24],
-	float l_s1_bias[6]
-){
-	__shared__ float l_s1_d_preact[6][6];
-	// int l = blockIdx.x;
-	int m = blockIdx.y;  // 6
-	int x = threadIdx.x;  // 6
-	int y = threadIdx.y;  // 6
-	// int z = threadIdx.z;
-
-	float o = sigmoid(l_s1_preact[m][x][y]);
-	l_s1_d_preact[x][y] = l_s1_d_output[m][x][y] * sigmoidPrime(o);
-
-	l_s1_bias[0] += lr * l_s1_d_preact[x][y]/(6*6*6);
-
-	int i,j;
-	for(i=0; i<4; i++) {
-		for(j=0; j<4; j++) {
-			// l_s1_d_weight[0][i][j] += l_s1_d_preact[m][x][y] * l_c1_output[m][h*4+i][w*4+j];
-			// l_c1_d_output[m][h*4+i][w*4+j] += l_s1_weight[0][i][j] * l_s1_d_preact[m][x][y];
-
-			atomicAdd(&l_s1_d_weight[0][i][j], l_s1_d_preact[x][y] * l_c1_output[m][x*4+i][y*4+j]);
-			atomicAdd(&l_c1_d_output[m][x*4+i][y*4+j], l_s1_weight[0][i][j] * l_s1_d_preact[x][y]);
-		}
-	}
-
-	if(m==0 && x<4 && y<4)
-		l_s1_weight[0][x][y] += lr * l_s1_d_weight[0][x][y];
-}
-
-
-__global__ void ConvLayerBaackward_Kernel(
-	float l_c1_preact[6][24][24],
-	float l_c1_d_output[6][24][24],
-	float l_c1_weight[6][5][5],
-	float l_input_output[28][28],
-	float l_c1_bias[6]
-){
-	__shared__ float l_c1_d_preact[24][24];
-	__shared__ float l_c1_d_weight[5][5];
-
-	// int l = blockIdx.x;
-	int m = blockIdx.y;  // 6
-	int x = threadIdx.x;  // 24
-	int y = threadIdx.y;  // 24
-	// int z = threadIdx.z;
-
-	if(x<5 && y <5)
-		l_c1_d_weight[x][y] = 0;
-	__syncthreads();
-
-	float o = sigmoid(l_c1_preact[m][x][y]);
-	l_c1_d_preact[x][y] = l_c1_d_output[m][x][y] * sigmoidPrime(o);
-
-	int i, j;
-	for(i=0; i<5; i++){
-		for(j=0; j<5; j++){
-			l_c1_d_weight[i][j] += l_c1_d_preact[x][y] * l_input_output[x + i][y + j] / (24*24);
-		}
-	}
-
-	l_c1_bias[m] += lr * l_c1_d_preact[x][y] / (6*24*24);
-
-	if(m==6 && x<5 && y<5)
-		l_c1_weight[m][x][y] += lr * l_c1_d_weight[x][y];
-}
