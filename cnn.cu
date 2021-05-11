@@ -87,7 +87,7 @@ static float forward(const double data[28][28]){
     
 
     int bz;
-    bz = ceil((float)28/TILE_WIDTH)*ceil((float)28/TILE_WIDTH);
+    bz = ceil((float)24/TILE_WIDTH)*ceil((float)24/TILE_WIDTH);
     dim3 gridDim(1, 6, bz);
     dim3 blockDim(TILE_WIDTH, TILE_WIDTH, 1);
     //constant memory test
@@ -137,8 +137,8 @@ static float backward(){
         (float (*)[6][6])l_p.d_output);
 
     
-    dim3 gridDims(1, 6, 1);
-    dim3 blockDims(6, 6, 1);
+    dim3 gridDims(1, 1, 1);
+    dim3 blockDims(6, 6, 6);
     PoolLayerBackward_Kernel<<<gridDims, blockDims>>>(
         (float (*)[6][6])l_p.preact,
         (float (*)[6][6])l_p.d_output,
