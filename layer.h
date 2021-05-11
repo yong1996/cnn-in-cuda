@@ -76,7 +76,6 @@ __global__ void PoolLayerBackward_Kernel(
 __constant__ float fully_input[6 * 6 * 6];
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out);
 __global__ void FullyConLayerBackward_kernel(
-	float l_f_d_weight[10][6][6][6],
 	float l_f_d_preact[10],
 	float l_f_bias[10],
 	float l_f_weight[10][6][6][6],

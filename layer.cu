@@ -256,52 +256,74 @@ __global__ void PoolLayerBackward_Kernel(
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
 	// int n = blockIdx.x;
 	int m = blockIdx.y;  // 10
-	int h = threadIdx.x;  // 6
-	int w = threadIdx.y;  // 6
-	int y = threadIdx.z;  // 6
+	int x = threadIdx.x;  // 6
+	int y = threadIdx.y;  // 6
+	int z = threadIdx.z;  // 6
 
 	float Pvalue = 0;
 	int o, p, q;
 	for (o = 0; o < 6; o++) {
 		for (p = 0; p < 6; p++) {
 			for (q = 0; q < 6; q++){
-				if(h < 6 && w < 6 && y < 6)
-				// Pvalue += input[y][h+p][w+q] * weight[m][y][h+p][w+q];
-				// Pvalue += input[h][w][y] * weight[m][h+o][w+p][y+q];
-				Pvalue+= input[o][p][q] * weight[m][o][p][q];
+				if(x < 6 && y < 6 && z < 6)
+				// Pvalue += input[h][y][z] * weight[m][x+o][y+p][z+q];
+				Pvalue += input[o][p][q] * weight[m][o][p][q];
 			}
 		}
 	}
 	__syncthreads();
 
-    if(m < W_out && h < 6 && w < 6 && y < 6)
+    if(m < 10 && x < 1 && y < 1 && z < 1)
 		output[m] = Pvalue + bias[m]; // Output
 }
 
+// __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
+// 	// int n = blockIdx.x;
+// 	// int m = blockIdx.y;  // -
+// 	int x = threadIdx.x;  // 6
+// 	int y = threadIdx.y;  // 6
+// 	int z = threadIdx.z;  // 6
+
+// 	__shared__ float Pvalue[10];
+// 	if((x+y)<=10 && x<6 && y<6 && z<0)
+// 		Pvalue[x+y] = 0;
+// 	__syncthreads();
+
+// 	for(int i=0; i<10; i++){
+// 		Pvalue[i] += input[x][y][z] * weight[i][x][y][z];
+// 	}
+
+// 	if((x+y)<=10 && x<6 && y<6 && z<0)
+// 		output[x+y] = Pvalue[x+y] + bias[x+y];
+// }
+
 __global__ void FullyConLayerBackward_kernel(
-	float l_f_d_weight[10][6][6][6],
 	float l_f_d_preact[10],
 	float l_f_bias[10],
 	float l_f_weight[10][6][6][6],
 	float l_p_output[6][6][6],
 	float l_p_d_output[6][6][6]
 ){
+	__shared__ float l_f_d_weight[6][6][6];
+	
 	// int l = blockIdx.x;
 	int m = blockIdx.y;  // 10
 	int x = threadIdx.x;  // 6
 	int y = threadIdx.y;  // 6
 	int z = threadIdx.z;  // 6
 
-
-	l_f_d_weight[m][x][y][z] = l_f_d_preact[m] * l_p_output[x][y][z];
+	l_f_d_weight[x][y][z] = l_f_d_preact[m] * l_p_output[x][y][z];
 	// l_p_d_output[x][y][z] += l_f_weight[m][x][y][z] * l_f_d_preact[m];
 
 	atomicAdd(&l_p_d_output[x][y][z], l_f_weight[m][x][y][z] * l_f_d_preact[m]);
 	if(x==0 && y==0 && z==0 )
 		l_f_bias[m] += lr * l_f_d_preact[m];
 
-	l_f_weight[m][x][y][z] += lr * l_f_d_weight[m][x][y][z];
+	l_f_weight[m][x][y][z] += lr * l_f_d_weight[x][y][z];
 }
+
+
+
 
 // input_height, input_width, weight_width, output_height, output_width
 //      1             6          10          1              10

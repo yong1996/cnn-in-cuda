@@ -103,7 +103,6 @@ static float forward(const double data[28][28]){
     apply_sigmoid <<<64,64>>>(l_p.preact, l_p.output, l_p.bytes);
 
     // for fully connected layer
-    bz = ceil((float)10/TILE_WIDTH);
     dim3 gridDimfc(1, 10, 1);
     dim3 blockDimfc(6, 6, 6);
     FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_p.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10, 1, 10);
@@ -131,7 +130,6 @@ static float backward(){
     dim3 gridDimfc(1, 10, 1);
     dim3 blockDimfc(6, 6, 6);
     FullyConLayerBackward_kernel<<<gridDimfc, blockDimfc>>>(
-        (float (*)[6][6][6])l_f.d_weight, 
         l_f.d_preact,
         l_f.bias,
         (float (*)[6][6][6]) l_f.weight,
@@ -234,7 +232,7 @@ static void test()
 
 
 int main(){
-    int epoch = 50;
+    int epoch = 5;
     printf("CNN CUDA version result: \n");
     printf("Number of epoch: %d  \n\n", epoch);
     loadData();
