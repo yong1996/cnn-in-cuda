@@ -105,14 +105,15 @@ __global__ void apply_sigmoid(float *input, float *output, const int N){
 // }
 
 
-__global__ void loss_func(float *err, float *output, unsigned int Y, const int N)
+__global__ void loss_func(float *err, float *output, const int Y, const int N)
 {
-	const int pos = blockIdx.x * blockDim.x + threadIdx.x;
-	const int size = blockDim.x * gridDim.x;
+	// int l = blockIdx.x;  // 1
+	int x = threadIdx.x; // 10
 
-	for (int idx = N * pos / size; idx < N * (pos+1) / size; ++idx) {
-		err[idx] = ((Y == idx ? 1.0f : 0.0f) - output[idx]);
-	}
+	if(x == Y) err[x] = 1.0f - output[x];
+	else err[x] = 0.0f - output[x];
+
+	// err[x] = ((x==Y ? 1.0f : 0.0f) - output[x]);
 }
 
 #define TILE_WIDTH 16
@@ -209,8 +210,7 @@ __global__ void PoolLayerForward_Kernel(float input[6][24][24], float output[6][
                 acc += input[m][pool_size * x+p][pool_size * y+q] * weight[0][p][q];
 	}
 	__syncthreads();
-	if(x < H_out && y < W_out)
-	{
+	if(x < H_out && y < W_out) {
 		// Y[n*(M*H_out*W_out)+ m*(H_out*W_out) + h*(W_out) + w] = acc;
 		output[m][x][y] = acc + bias[0];
 	}
@@ -240,8 +240,8 @@ __global__ void PoolLayerBackward_Kernel(
 	int i,j;
 	for(i=0; i<4; i++) {
 		for(j=0; j<4; j++) {
-			// l_p_d_weight[0][i][j] += l_p_d_preact[m][x][y] * l_c1_output[m][h*4+i][w*4+j];
-			// l_c1_d_output[m][h*4+i][w*4+j] += l_p_weight[0][i][j] * l_p_d_preact[m][x][y];
+			// l_p_d_weight[0][i][j] += l_p_d_preact[m][x][y] * l_c1_output[m][x*4+i][y*4+j];
+			// l_c1_d_output[m][x*4+i][y*4+j] += l_p_weight[0][i][j] * l_p_d_preact[m][x][y];
 
 			atomicAdd(&l_p_d_weight[0][i][j], l_p_d_preact[x][y] * l_c1_output[m][x*4+i][y*4+j]);
 			atomicAdd(&l_c1_d_output[m][x*4+i][y*4+j], l_p_weight[0][i][j] * l_p_d_preact[x][y]);
@@ -266,7 +266,7 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 		for (p = 0; p < 6; p++) {
 			for (q = 0; q < 6; q++){
 				if(x < 6 && y < 6 && z < 6)
-				// Pvalue += input[h][y][z] * weight[m][x+o][y+p][z+q];
+				// Pvalue += input[x][y][z] * weight[m][x+o][y+p][z+q];
 				Pvalue += input[o][p][q] * weight[m][o][p][q];
 			}
 		}

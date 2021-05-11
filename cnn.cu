@@ -183,7 +183,7 @@ static void learn(){
 		l_c1.bp_clear();
         
         time_taken += forward(train_set[i].data);
-        loss_func<<<10, 1>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
+        loss_func<<<1, 10>>>(l_f.d_preact, l_f.output, train_set[i].label, 10);
         time_taken += backward();
 
     }
