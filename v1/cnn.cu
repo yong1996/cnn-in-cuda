@@ -4,7 +4,6 @@
 #define USE_MNIST_LOADER
 #define MNIST_DOUBLE
 
-
 // includes, system
 #include <string>
 
@@ -15,18 +14,9 @@
 #include <math.h>
 #include <time.h>
 
-
-// //opencv for testing
-// #include <opencv2/core/core.hpp>
-// #include <opencv2/highgui/highgui.hpp>
-// using namespace cv;
-
 #include "mnist.h"
 #include "layer.h"
 #include "layer.cu"
-//#include "maxpooling.h"
-//#include "util.h"
-
 
 //define the kernel size
 #define TILE_WIDTH 16  //for small example
@@ -197,7 +187,7 @@ static void learn(){
 
      t = clock() - t;
      float cpu_time = (float)t/CLOCKS_PER_SEC;
-     printf("The CPU spend %.2f s.\n", cpu_time);
+     printf("Total spend %.2f s.\n", cpu_time);
 }
 
 
