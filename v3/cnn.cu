@@ -19,7 +19,7 @@
 #include "layer.cu"
 
 struct mnist_data {
-	float data[28][28];
+	double data[28][28];
 	int label;  //0-9
 };
 
@@ -122,16 +122,20 @@ static inline void loadData(){
     printf("loadData spend %.2f seconds \n", load_time);
 }
 
-static float forward(const float input[28][28]){
+static float forward(const double data[28][28]){
+
     // printf("run forward\n");
 
-    // // print input
-    // for (int i = 0; i<28; i++){
-    //     for (int j = 0; j<28; j++){
-    //         // printf("%.2f ", input[i][j]);
-    //     }
-    //     // printf("\n");
-    // }
+    
+    float input[28][28];
+
+    for (int i = 0; i<28; i++){
+        for (int j = 0; j<28; j++){
+            input[i][j] = data[i][j];
+            // printf("%.2f ", data[i][j]);
+        }
+        // printf("\n");
+    }
 
     l_input.clear();
 	l_c1.clear();
@@ -145,6 +149,9 @@ static float forward(const float input[28][28]){
 
     l_input.setInput((float *)input);
     // cudaMemcpyToSymbol(conv_input, input, sizeof(float) * 28 * 28);
+
+    //printf("input image: %f\n", &l_input.output[0][0]);
+
 
     //timer
 	cudaEvent_t start, stop;
@@ -261,15 +268,15 @@ static void learn(){
 
     }
 
-    printf("Time on GPU: %.5f seconds\n", time_taken /  1000);
+    printf("time on GPU: %.5f seconds\n", time_taken /  1000);
 
     t = clock() - t;
 	float cpu_time = (float)t/CLOCKS_PER_SEC;
-    printf("Total learn time spend %.2f seconds\n", cpu_time);
+    printf("Total spend %.2f seconds \n", cpu_time);
 }
 
 
-static unsigned int classify(float data[28][28])
+static unsigned int classify(double data[28][28])
 {
 	float res[10];
 
@@ -310,17 +317,10 @@ int main(){
     printf("Number of epoch: %d  \n\n", epoch);
     loadData();
     
-    clock_t t;
     for (int i = 0; i < epoch; i++){
-        t = clock();
-
         printf("epoch: %d  \n", i + 1);
         learn();
         test();
-        
-        t = clock() - t;
-        float epoch_time = (float)t/CLOCKS_PER_SEC;
-        printf("Spend %.2f seconds per epoch\n ---------- \n", epoch_time);
     }
     
     

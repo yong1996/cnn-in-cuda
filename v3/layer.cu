@@ -316,6 +316,26 @@ __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[1
 		output[x] = Pvalue + bias[x]; // Output
 }
 
+// __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
+// 	// int n = blockIdx.x;
+// 	// int m = blockIdx.y;  // -
+// 	int x = threadIdx.x;  // 6
+// 	int y = threadIdx.y;  // 6
+// 	int z = threadIdx.z;  // 6
+
+// 	__shared__ float Pvalue[10];
+// 	if((x+y)<=10 && x<6 && y<6 && z<0)
+// 		Pvalue[x+y] = 0;
+// 	__syncthreads();
+
+// 	for(int i=0; i<10; i++){
+// 		Pvalue[i] += input[x][y][z] * weight[i][x][y][z];
+// 	}
+
+// 	if((x+y)<=10 && x<6 && y<6 && z<0)
+// 		output[x+y] = Pvalue[x+y] + bias[x+y];
+// }
+
 __global__ void FullyConLayerBackward_kernel(
 	float l_f_b_preact[10],
 	float l_f_bias[10],
