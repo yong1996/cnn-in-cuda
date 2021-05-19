@@ -29,9 +29,6 @@ static Layer l_c1 = Layer(5*5, 6, 24*24*6);
 static Layer l_p = Layer(4*4, 1, 6*6*6);
 static Layer l_f = Layer(6*6*6, 10, 10);
 
-// static Layer l_f1 = Layer(6*6*6, 10, 36);
-// static Layer l_f2 = Layer(36, 1, 10);
-
 static mnist_data *train_set, *test_set;
 static unsigned int train_cnt, test_cnt;
 
@@ -109,17 +106,10 @@ int mnist_load(
 }
 
 static inline void loadData(){
-    clock_t t;
-	t = clock();
-
     mnist_load("MNIST_data/train-images.idx3-ubyte", "MNIST_data/train-labels.idx1-ubyte",
 		&train_set, &train_cnt);
 	mnist_load("MNIST_data/t10k-images.idx3-ubyte", "MNIST_data/t10k-labels.idx1-ubyte",
 		&test_set, &test_cnt);
-
-    t = clock() - t;
-	float load_time = (float)t/CLOCKS_PER_SEC;
-    printf("loadData spend %.2f seconds \n", load_time);
 }
 
 static float forward(const double data[28][28]){
@@ -174,13 +164,12 @@ static float forward(const double data[28][28]){
     // for pooling layer example:
     dim3 gridDimPool(1, 1, 1);
     dim3 blockDimPool(6, 6, 6);
-    PoolLayerForward_Kernel<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_p.preact, (float (*)[4][4])l_p.weight, l_p.bias, 24, 24, 6, 4);
-    // AvgPoolLayerForward_Kernel<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_p.preact, 24, 24, 6, 4);
+    PoolLayerForward_Kernel<<<gridDimPool,blockDimPool>>>((float (*)[24][24])l_c1.output, (float (*)[6][6])l_p.preact, (float (*)[4][4])l_p.weight, l_p.bias ,24, 24, 6, 4);
     apply_sigmoid <<<64,64>>>(l_p.preact, l_p.output, l_p.bytes);
 
     // for fully connected layer
-    dim3 gridDimfc(1, 1, 1);
-    dim3 blockDimfc(10, 1, 1);
+    dim3 gridDimfc(1, 10, 1);
+    dim3 blockDimfc(6, 6, 6);
     FullyConLayerForward_kernel<<<gridDimfc,blockDimfc>>>((float (*)[6][6])l_p.output, (float (*)[6][6][6])l_f.weight, l_f.preact, l_f.bias, 1, 6, 10, 1, 10);
 	apply_sigmoid<<<64, 64>>>(l_f.preact, l_f.output, l_f.bytes);
 
@@ -223,10 +212,6 @@ static float backward(){
         (float (*)[24][24])l_c1.output,
         (float (*)[24][24])l_c1.b_output,
         l_p.bias);
-    // AvgPoolLayerBackward_Kernel<<<gridDims, blockDims>>>(
-    //     (float (*)[6][6])l_p.preact,
-    //     (float (*)[24][24])l_c1.b_output,
-    //     4 );
 
     
     dim3 gridDimc(1, 6, 1);

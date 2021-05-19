@@ -108,6 +108,8 @@ __global__ void loss_func(float *err, float *output, const int Y, const int N)
 
 	if(x == Y) err[x] = 1.0f - output[x];
 	else err[x] = 0.0f - output[x];
+
+	// err[x] = ((x==Y ? 1.0f : 0.0f) - output[x]);
 }
 
 #define TILE_WIDTH 16
@@ -183,6 +185,18 @@ __global__ void ConvLayerBackward_Kernel(
 __global__ void PoolLayerForward_Kernel(float input[6][24][24], float output[6][6][6], float weight[1][4][4], float bias[1] ,int H_in, int W_in, int M, int pool_size){
 	int H_out = H_in/pool_size;
 	int W_out = W_in/pool_size;
+	// int W_grid = ceilf((float)W_out/TILE_WIDTH);
+	// if(W_grid==0){
+    //     W_grid = 1;
+    // }
+		
+	// // int l = blockIdx.x;
+	// int m = blockIdx.y;
+	// int x = (blockIdx.z / W_grid)*TILE_WIDTH + threadIdx.y;
+	// int y = (blockIdx.z % W_grid)*TILE_WIDTH + threadIdx.x;
+	//h and w is not center point of calculating, it's upper left corner point of Input image
+	
+
 	// int l = blockIdx.x;
 	// int m = blockIdx.y;
 	int x = threadIdx.x;  // 6
@@ -272,42 +286,42 @@ __global__ void AvgPoolLayerForward_Kernel(float input[6][24][24], float output[
 
 __global__ void AvgPoolLayerBackward_Kernel(
 	float input[6][6][6],
-	float output[6][24][24],
-	int pool_size
+	float output[6][24][24]
 ){
 	int x = threadIdx.x;  // 6
 	int y = threadIdx.y;  // 6
 	int z = threadIdx.z;  // 6
 
 	int i,j;
-	for(i=0; i<pool_size; i++) {
-		for(j=0; j<pool_size; j++) {
-			output[x][y*pool_size+i][z*pool_size+j] = input[x][y][z] / (pool_size*pool_size);
+	for(i=0; i<4; i++) {
+		for(j=0; j<4; j++) {
+			output[x][y*4+i][z*4+j] = input[x][y][z] / (4*4);
 		}
 	}
 }
 
 __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
 	// int n = blockIdx.x;
-	// int m = blockIdx.y;  // 
-	int x = threadIdx.x;  // 10
-	// int y = threadIdx.y;  // 
-	// int z = threadIdx.z;  // 
+	int m = blockIdx.y;  // 10
+	int x = threadIdx.x;  // 6
+	int y = threadIdx.y;  // 6
+	int z = threadIdx.z;  // 6
 
 	float Pvalue = 0;
 	int o, p, q;
 	for (o = 0; o < 6; o++) {
 		for (p = 0; p < 6; p++) {
 			for (q = 0; q < 6; q++){
-				if(x < 10)
-				Pvalue += input[o][p][q] * weight[x][o][p][q];
+				if(x < 6 && y < 6 && z < 6)
+				// Pvalue += input[x][y][z] * weight[m][x+o][y+p][z+q];
+				Pvalue += input[o][p][q] * weight[m][o][p][q];
 			}
 		}
 	}
 	__syncthreads();
 
-    if(x < 10)
-		output[x] = Pvalue + bias[x]; // Output
+    if(m < 10 && x < 1 && y < 1 && z < 1)
+		output[m] = Pvalue + bias[m]; // Output
 }
 
 // __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
@@ -346,8 +360,8 @@ __global__ void FullyConLayerBackward_kernel(
 	int z = threadIdx.z;  // 6
 
 	l_f_b_weight[x][y][z] = l_f_b_preact[m] * l_p_output[x][y][z];
-	
 	// l_p_b_output[x][y][z] += l_f_weight[m][x][y][z] * l_f_b_preact[m];
+
 	atomicAdd(&l_p_b_output[x][y][z], l_f_weight[m][x][y][z] * l_f_b_preact[m]);
 	if(x==0 && y==0 && z==0 )
 		l_f_bias[m] += lr * l_f_b_preact[m];
@@ -355,6 +369,48 @@ __global__ void FullyConLayerBackward_kernel(
 	l_f_weight[m][x][y][z] += lr * l_f_b_weight[x][y][z];
 }
 
+
+
+
+// input_height, input_width, weight_width, output_height, output_width
+//      1             6          10          1              10
+// __global__ void FullyConLayerForward_kernel(float input[6][6][6], float weight[10][6][6][6], float output[10], float bias[10], int H_in, int W_in, int W_we , int H_out, int W_out) {
+// 	int W_grid = ceilf((float)W_out/TILE_WIDTH);
+// 	if(W_grid==0)
+// 		W_grid = 1;
+
+// 	// int l = blockIdx.x;
+// 	int m = blockIdx.y;  // 10
+// 	// int x = threadIdx.x;
+// 	// int y = threadIdx.y;
+// 	// int z = threadIdx.z;
+
+// 	float Pvalue = 0;
+// 	int o, p, q;
+// 	for (o = 0; o < 6; o++) {
+// 		for (p = 0; p < 6; p++) {
+// 			for (q = 0; q < 6; q++){
+// 				Pvalue += input[o][p][q] * weight[m][o][p][q];
+// 			}
+// 		}
+// 	}
+// 	__syncthreads();
+
+// 	if(m < W_out)
+// 		output[m] = Pvalue + bias[m]; // Output
+
+// 	// float Pvalue = 0;
+// 	// for (int i = 0; i < 6; i++){
+// 	// 	if(x < 6 && y < 6)
+// 	// 	Pvalue += input[x][y][i] * weight[m][x][y][i];
+// 	// }
+// 	// // __syncthreads();
+
+//     // if(m < 10 && x < 6 && y < 6)
+// 	// 	atomicAdd(&output[m], Pvalue);
+// 	// if(x==0 && y==0)
+// 	// 	output[m] += bias[m];
+// }
 
 
 // __global__ void FullyConLayerBackward_kernel(

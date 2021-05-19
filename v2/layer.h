@@ -73,7 +73,7 @@ __global__ void PoolLayerBackward_Kernel(
 	float l_p_bias[6]
 );
 __global__ void AvgPoolLayerForward_Kernel(float input[6][24][24], float output[6][6][6], int H_in, int W_in, int M, int pool_size);
-__global__ void AvgPoolLayerBackward_Kernel(float input[6][6][6], float output[6][24][24], int pool_size);
+__global__ void AvgPoolLayerBackward_Kernel(float input[6][6][6], float output[6][24][24]);
 
 // FullyConnect
 __constant__ float fully_input[6 * 6 * 6];
