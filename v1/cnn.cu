@@ -14,13 +14,16 @@
 #include <math.h>
 #include <time.h>
 
-#include "mnist.h"
 #include "layer.h"
 #include "layer.cu"
 
+struct mnist_data {
+	double data[28][28];
+	int label;  //0-9
+};
+
 //define the kernel size
 #define TILE_WIDTH 16  //for small example
-
 
 // set Layer
 static Layer l_input = Layer(0, 0, 28*28);
@@ -31,6 +34,78 @@ static Layer l_f = Layer(6*6*6, 10, 10);
 static mnist_data *train_set, *test_set;
 static unsigned int train_cnt, test_cnt;
 
+unsigned int dataToInt(char* c) {
+	unsigned int d = 0;
+	for (int i = 0; i < 4; i++) {
+		d <<= 8;
+		d |= (unsigned char)c[i];
+	}
+	return d;
+}
+
+int mnist_load(
+    const char *image_filename,
+	const char *label_filename,
+	mnist_data **data,
+	unsigned int *count) 
+{
+    char tmp[4];
+    unsigned char read_data[28*28];
+    unsigned int im, l, i, j, k, ic1, ic2, image_cnt, label_cnt;
+
+    FILE *ifp = fopen(image_filename, "rb");
+	FILE *lfp = fopen(label_filename, "rb");
+
+    if (!ifp || !lfp) {
+        printf("file not open");
+        if (ifp) fclose(ifp);
+        if (lfp) fclose(lfp);
+        return -1;
+    }
+
+    fread(tmp, 1, 4, ifp);
+	im = dataToInt(tmp);
+	fread(tmp, 1, 4, lfp);
+	l = dataToInt(tmp);
+    fread(tmp, 1, 4, ifp);
+	image_cnt = dataToInt(tmp);
+	fread(tmp, 1, 4, lfp);
+	label_cnt = dataToInt(tmp);
+
+    fread(tmp, 1, 4, ifp);
+	ic1 = dataToInt(tmp);
+    fread(tmp, 1, 4, ifp);
+	ic2 = dataToInt(tmp);
+
+    // printf("im, l, image_cnt, label_cnt, ic1, ic2 \n");
+    // printf("%d, %d, %d, %d, %d, %d \n", im, l, image_cnt, label_cnt, ic1, ic2);
+
+    if(im != 2051 || l != 2049 || image_cnt != label_cnt || ic1 != 28 || ic2 != 28){
+        printf("get wrong file");
+        fclose(ifp);
+        fclose(lfp);
+        return -2;
+    }
+
+    *count = image_cnt;
+	*data = (mnist_data *)malloc(sizeof(mnist_data) * image_cnt);
+
+    for (i = 0; i < image_cnt; i++) {
+        mnist_data *d = &(*data)[i];
+
+        fread(read_data, 1, 28*28, ifp);
+        for(j=0; j<28; j++){
+            for(k=0; k<28; k++)
+                d->data[j][k] = read_data[j*28+k]/255.0;
+        }
+
+        fread(tmp, 1, 1, lfp);
+		d->label = tmp[0]%10;
+    }
+    fclose(ifp);
+    fclose(lfp);
+    return 0;
+}
 
 static inline void loadData(){
     mnist_load("MNIST_data/train-images.idx3-ubyte", "MNIST_data/train-labels.idx1-ubyte",
